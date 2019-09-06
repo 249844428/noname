@@ -155,8 +155,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					return get.itemtype(event.cards)=='cards'&&get.position(event.cards[0])=='d';
 				},
 				content:function(){
-					player.gain(trigger.cards);
-					player.$gain2(trigger.cards);
+					player.gain(trigger.cards,'gain2');
 				},
 				ai:{
 					maixie:true,
@@ -217,14 +216,13 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					}).set('judging',trigger.player.judging[0]);
 					"step 1"
 					if(result.bool){
-						player.respond(result.cards,'highlight');
+						player.respond(result.cards,'guicai','highlight');
 					}
 					else{
 						event.finish();
 					}
 					"step 2"
 					if(result.bool){
-						player.logSkill('guicai');
 						if(trigger.player.judging[0].clone){
 							trigger.player.judging[0].clone.classList.remove('thrownhighlight');
 							game.broadcast(function(card){
@@ -301,7 +299,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 						return current!=player&&current.countCards('h')&&get.attitude(player,current)<=0;
 					});
 					check=(num>=2);
-					player.chooseTarget(get.prompt('tuxi'),[1,2],function(card,player,target){
+					player.chooseTarget(get.prompt('tuxi'),'获得其他一至两名角色的各一张手牌',[1,2],function(card,player,target){
 						return target.countCards('h')>0&&player!=target;
 					},function(target){
 						if(!_status.event.aicheck) return 0;
@@ -1027,7 +1025,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				content:function(){
 					'step 0'
 					event.num=Math.min(5,game.countPlayer());
-					if(player.hasSkill('yizhi')) event.num=5;
+					if(event.name!='yizhi'&&player.hasSkill('yizhi')) event.num=5;
 					event.cards=get.cards(event.num);
 					event.chosen=[];
 					event.num1=0;
@@ -1873,7 +1871,8 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 							}
 							return -1;
 						},
-						prompt:get.prompt2('liuli')
+						prompt:get.prompt('liuli'),
+						prompt2:'弃置一张牌，将此【杀】转移给攻击范围内的一名其他角色',
 					});
 					"step 1"
 					if(result.bool){

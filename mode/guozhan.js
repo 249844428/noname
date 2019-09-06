@@ -217,7 +217,7 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 				guozhan_bian:["gz_liqueguosi","gz_zuoci","gz_bianfuren","gz_xunyou","gz_lingtong","gz_lvfan","gz_masu","gz_shamoke",],
 				guozhan_quan:["gz_cuimao","gz_yujin","gz_wangping","gz_fazheng","gz_wuguotai","gz_lukang","gz_yuanshu","gz_zhangxiu"],
 				guozhan_jun:["gz_jun_caocao","gz_jun_sunquan","gz_jun_liubei","gz_jun_zhangjiao"],
-				guozhan_others:["gz_lingcao","gz_lifeng","gz_beimihu"],
+				guozhan_others:["gz_lingcao","gz_lifeng","gz_beimihu","gz_jianggan"],
 			}
 		},
 		characterPack:{
@@ -329,6 +329,7 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 				gz_lingcao:['male','wu',4,['dujin']],
 				gz_lifeng:['male','shu',3,['tunchu','shuliang']],
 				gz_beimihu:["female","qun",3,["hmkguishu","hmkyuanyu"]],
+				gz_jianggan:["male","wei",3,["weicheng","daoshu"]],
 				
 				gz_cuimao:['male','wei',3,['gzzhengbi','gzfengying'],[]],
 				gz_yujin:['male','wei',4,['gzjieyue'],['gzskin']],
@@ -2467,7 +2468,7 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 				direct:true,
 				content:function (){
 					"step 0"
-					player.chooseTarget(get.prompt('yinghun'),function(card,player,target){
+					player.chooseTarget(get.prompt2('gzyinghun'),function(card,player,target){
 						return player!=target;
 					}).set('ai',function(target){
 						var player=_status.event.player;
@@ -2635,7 +2636,7 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 				direct:true,
 				content:function (){
 					"step 0"
-					player.chooseTarget(get.prompt('new_jieming'),function(card,player,target){
+					player.chooseTarget(get.prompt('new_jieming'),'令一名角色将手牌补至X张（X为其体力上限且至多为5）',function(card,player,target){
 						return target.countCards('h')<Math.min(target.maxHp,5);
 					}).set('ai',function(target){
 						var att=get.attitude(_status.event.player,target);
@@ -2687,7 +2688,7 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 				direct:true,
 				content:function (){
 					"step 0"
-					player.chooseTarget(get.prompt('new_fangzhu'),function(card,player,target){
+					player.chooseTarget(get.prompt2('new_fangzhu'),function(card,player,target){
 						return player!=target
 					}).ai=function(target){
 						if(target.hasSkillTag('noturn')) return 0;
@@ -2712,7 +2713,7 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 							var player=_status.event.player;
 							if(player.isTurnedOver()) return -1;
 							return (player.hp*player.hp)-get.value(card);
-						}).set('dialog',['弃置一张手牌并失去一点体力；或选择不弃置，将武将牌翻面并摸牌。']);
+						}).set('prompt','弃置一张手牌并失去一点体力；或选择不弃置，将武将牌翻面并摸'+(player.maxHp-player.hp)+'张牌。');
 					}
 					else event.finish();
 					"step 2"
@@ -3739,7 +3740,7 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 				},
 				content:function(){
 					'step 0'
-					player.chooseTarget(get.prompt('xuanlve'),function(card,player,target){
+					player.chooseTarget(get.prompt('xuanlve'),'弃置一名其他角色的一张牌',function(card,player,target){
 						return target!=player&&target.countDiscardableCards(player,'he');
 					}).set('ai',function(target){
 						return -get.attitude(_status.event.player,target);
@@ -5253,7 +5254,7 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 						ai2:function(target){
 							return get.attitude(_status.event.player,target)-3;
 						},
-						prompt:get.prompt('yuanhu')
+						prompt:get.prompt2('huyuan')
 					});
 					"step 1"
 					if(result.bool){
@@ -5598,7 +5599,7 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 				direct:true,
 				content:function(){
 					'step 0'
-					player.chooseControl('点数+3','点数-3','cancel2').set('prompt',get.prompt('yingyang')).set('ai',function(){
+					player.chooseControl('点数+3','点数-3','cancel2').set('prompt',get.prompt3('yingyang')).set('ai',function(){
 						if(_status.event.small) return 1;
 						else return 0;
 					}).set('small',trigger.small);
@@ -5609,18 +5610,22 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 							game.log(player,'拼点牌点数+3');
 							if(player==trigger.player){
 								trigger.num1+=3;
+								if(trigger.num1>13) trigger.num1=13;
 							}
 							else{
 								trigger.num2+=3;
+								if(trigger.num2>13) trigger.num2=13;
 							}
 						}
 						else{
 							game.log(player,'拼点牌点数-3');
 							if(player==trigger.player){
 								trigger.num1-=3;
+								if(trigger.num1<1) trigger.num1=1;
 							}
 							else{
 								trigger.num2-=3;
+								if(trigger.num2<1) trigger.num2=1;
 							}
 						}
 					}
@@ -6042,7 +6047,7 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 					if(get.damageEffect(trigger.player,player,player)<=0){
 						nono=true;
 					}
-					var next=player.chooseToDiscard(get.prompt('gzxiaoguo',trigger.player),{type:'basic'});
+					var next=player.chooseToDiscard(get.prompt2('gzxiaoguo',trigger.player),{type:'basic'});
 					next.set('ai',function(card){
 						if(_status.event.nono) return 0;
 						return 8-get.useful(card);
@@ -7064,10 +7069,7 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 		translate:{
 			ye:'野',
 			ye2:'野心家',
-			wei2:'魏国',
-			shu2:'蜀国',
-			wu2:'吴国',
-			qun2:'群雄',
+			
 			bumingzhi:'不明置',
 			mingzhizhujiang:'明置主将',
 			mingzhifujiang:'明置副将',
@@ -7322,7 +7324,7 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 			baoling:'暴凌',
 			baoling_info:'主将技，锁定技，出牌阶段结束时，若你有副将，则你移除副将，然后加3点体力上限，回复3点体力，并获得“崩坏”',
 			yingyang:'鹰扬',
-			yingyang_info:'当你拼点的牌亮出后，你可以令此牌的点数+3或-3',
+			yingyang_info:'当你拼点的牌亮出后，你可以令此牌的点数+3或-3（至多为K，至少为1）',
 			hunshang:'魂殇',
 			hunshang_info:'副将技，此武将牌减少半个阴阳鱼；准备阶段，若你的体力值不大于1，则你本回合获得“英姿”和“英魂”',
 			gzguixiu:'闺秀',
@@ -7509,7 +7511,7 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 
 			['spade',1,'xietianzi',null,['lianheng']],
 			['spade',2,'minguangkai'],
-			['spade',3,'huoshaolianying','fire'],
+			['spade',3,'huoshaolianying','fire',['lianheng']],
 			['spade',4,'sha'],
 			['spade',5,'qinglong'],
 			['spade',6,'jiu',null,['lianheng']],
@@ -7682,8 +7684,8 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 				},
 				changeVice:function(){
 					'step 0'
-					if(!player.hasViceCharacter()) event.finish();
-					else{
+					//if(!player.hasViceCharacter()) event.finish();
+					//else{
 						var group=lib.character[player.name1][1];
 						_status.characterlist.randomSort();
 						event.tochange=[]
@@ -7695,11 +7697,11 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 						else{
 							player.chooseButton(true,['选择要变更的武将牌',[event.tochange,'character']]);
 						}
-					}
+					//}
 					'step 1'
 					var name=result.links[0];
 					_status.characterlist.remove(name);
-					_status.characterlist.add(player.name2);
+					if(player.hasViceCharacter()) _status.characterlist.add(player.name2);
 					game.log(player,'将副将变更为','#g'+get.translation(name));
 					player.viceChanged=true;
 					if(player.isUnseen(1)){
@@ -7755,7 +7757,7 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 				mayChangeVice:function(repeat){
 					if(!_status.changedSkills) _status.changedSkills=[];
 					var skill=_status.event.name;
-					if(this.hasViceCharacter()&&(repeat||!_status.changedSkills.contains(skill))){
+					if(repeat||!_status.changedSkills.contains(skill)){
 						var next=game.createEvent('mayChangeVice');
 						next.setContent('mayChangeVice');
 						next.player=this;
@@ -8233,18 +8235,24 @@ game.import('mode',function(lib,game,ui,get,ai,_status){
 					return true;
 				},
 				isMajor:function(){
+					if(this.identity=='ye'){
+						return this.getEquip('yuxi')!=undefined||this.hasSkill('gzyongsi')&&!game.hasPlayer(function(current){
+							return current.getEquip('yuxi');
+						});
+					}
 					if(!lib.group.contains(this.identity)) return false;
 					var list=[];
 					for(var i=0;i<game.players.length;i++){
 						if(game.players[i].getEquip('yuxi')||game.players[i].hasSkill('gzyongsi')&&!game.hasPlayer(function(current){
 								return current.getEquip('yuxi');
 							})){
-							if(game.players[i].identity!='ye'&&game.players[i].identity!='unknown'){
+							if(game.players[i].identity!='unknown'){
 								list.add(game.players[i].identity);
 							}
 						}
 					}
 					if(list.length){
+						if(list.contains('ye')) return false;
 						return list.contains(this.identity);
 					}
 					var max=0;

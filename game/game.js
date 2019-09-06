@@ -45,6 +45,11 @@
 		ondb:[],
 		ondb2:[],
 		chatHistory:[],
+		emotionList:{
+			shibing_emotion:15,
+			guojia_emotion:20,
+			zhenji_emotion:20,
+		},
 		arenaReady:[],
 		onfree:[],
 		inpile:[],
@@ -9411,6 +9416,12 @@
 			qun:'群',
 			shen:'神',
 			western:'西',
+			wei2:'魏国',
+			shu2:'蜀国',
+			wu2:'吴国',
+			qun2:'群雄',
+			shen2:'神将',
+			western2:'西方',
 			male:'男',
 			female:'女',
 			mad:'混乱',
@@ -9458,6 +9469,10 @@
 			fengyin:'封印',
 			baiban:'白板',
 			_disableJudge:"判定区",
+			
+			guojia_emotion:'郭嘉表情',
+			zhenji_emotion:'甄姬表情',
+			shibing_emotion:'士兵表情',
 
 			pause:'暂停',
 			config:'选项',
@@ -9475,6 +9490,167 @@
 		},
 		element:{
 			content:{
+				chooseToDuiben:function(){
+					'step 0'
+					game.log(player,'对',target,'发起了','#y对策');
+					if(_status.connectMode){
+						player.chooseButtonOL([
+							[player,['对策：请选择一种防御对策',[[['','','db_def2'],['','','db_def1']],'vcard']],true],
+							[target,['对策：请选择一种进攻之策',[[['','','db_atk1'],['','','db_atk2']],'vcard']],true]
+						],function(){},function(){return 1+Math.random()}).set('switchToAuto',function(){
+							_status.event.result='ai';
+						}).set('processAI',function(){
+							var buttons=_status.event.dialog.buttons;
+							return {
+								bool:true,
+								links:[buttons.randomGet().link],
+							}
+						});
+					}
+					'step 1'
+					if(_status.connectMode){
+						event.mes=result[player.playerid].links[0][2];
+						event.tes=result[target.playerid].links[0][2];
+						event.goto(4);
+					}
+					else{
+						player.chooseButton(['对策：请选择一种防御对策',[[['','','db_def2'],['','','db_def1']],'vcard']],true).ai=function(){return 1+Math.random()};
+					}
+					'step 2'
+					event.mes=result.links[0][2];
+					target.chooseButton(['对策：请选择一种进攻之策',[[['','','db_atk1'],['','','db_atk2']],'vcard']],true).ai=function(){return 1+Math.random()};
+					'step 3'
+					event.tes=result.links[0][2];
+					'step 4'
+					game.broadcast(function(){
+						ui.arena.classList.add('thrownhighlight');
+					});
+					ui.arena.classList.add('thrownhighlight');
+					game.addVideo('thrownhighlight1');
+					target.$compare(game.createCard(event.tes,'',''),player,game.createCard(event.mes,'',''));
+					game.log(target,'选择的进攻之策为','#g'+get.translation(event.tes));
+					game.log(player,'选择的防御对策为','#g'+get.translation(event.mes));
+					game.delay(0,1500);
+					'step 5'
+					var mes=event.mes.slice(6);
+					var tes=event.tes.slice(6);
+					var str;
+					if(mes==tes){
+						str=get.translation(player)+'对策成功';
+						player.popup('胜','wood');
+						target.popup('负','fire');
+						game.log(player,'#g胜');
+						event.result={bool:true};
+					}
+					else{
+						str=get.translation(player)+'对策失败';
+						target.popup('胜','wood');
+						player.popup('负','fire');
+						game.log(target,'#g胜');
+						event.result={bool:false};
+					}
+					game.broadcastAll(function(str){
+						var dialog=ui.create.dialog(str);
+						dialog.classList.add('center');
+						setTimeout(function(){
+							dialog.close();
+						},1000);
+					},str);
+					game.delay(2);
+					'step 6'
+					game.broadcastAll(function(){
+						ui.arena.classList.remove('thrownhighlight');
+					});
+					game.addVideo('thrownhighlight2');
+					if(event.clear!==false){
+						game.broadcastAll(ui.clear);
+					}
+				},
+				chooseToPSS:function(){
+					'step 0'
+					game.log(player,'对',target,'发起了石头剪刀布');
+					if(_status.connectMode){
+						player.chooseButtonOL([
+							[player,['石头剪刀布：请选择一种手势',[[['','','pss_stone'],['','','pss_scissor'],['','','pss_paper']],'vcard']],true],
+							[target,['石头剪刀布：请选择一种手势',[[['','','pss_stone'],['','','pss_scissor'],['','','pss_paper']],'vcard']],true]
+						],function(){},function(){return 1+Math.random()}).set('switchToAuto',function(){
+							_status.event.result='ai';
+						}).set('processAI',function(){
+							var buttons=_status.event.dialog.buttons;
+							return {
+								bool:true,
+								links:[buttons.randomGet().link],
+							}
+						});
+					}
+					'step 1'
+					if(_status.connectMode){
+						event.mes=result[player.playerid].links[0][2];
+						event.tes=result[target.playerid].links[0][2];
+						event.goto(4);
+					}
+					else{
+						player.chooseButton(['石头剪刀布：请选择一种手势',[[['','','pss_stone'],['','','pss_scissor'],['','','pss_paper']],'vcard']],true).ai=function(){return 1+Math.random()};
+					}
+					'step 2'
+					event.mes=result.links[0][2];
+					target.chooseButton(['石头剪刀布：请选择一种手势',[[['','','pss_stone'],['','','pss_scissor'],['','','pss_paper']],'vcard']],true).ai=function(){return 1+Math.random()};
+					'step 3'
+					event.tes=result.links[0][2];
+					'step 4'
+					game.broadcast(function(){
+						ui.arena.classList.add('thrownhighlight');
+					});
+					ui.arena.classList.add('thrownhighlight');
+					game.addVideo('thrownhighlight1');
+					player.$compare(game.createCard(event.mes,'',''),target,game.createCard(event.tes,'',''));
+					game.log(player,'选择的手势为','#g'+get.translation(event.mes));
+					game.log(target,'选择的手势为','#g'+get.translation(event.tes));
+					game.delay(0,1500);
+					'step 5'
+					var mes=event.mes.slice(4);
+					var tes=event.tes.slice(4);
+					var str;
+					if(mes==tes){
+						str='二人平局';
+						player.popup('平','metal');
+						target.popup('平','metal');
+						game.log('石头剪刀布的结果为','#g平局');
+						event.result={tie:true};
+					}
+					else{
+						if({paper:'stone',scissor:'paper',stone:'scissor'}[mes]==tes){
+							str=get.translation(player)+'胜利';
+							player.popup('胜','wood');
+							target.popup('负','fire');
+							game.log(player,'#g胜');
+							event.result={bool:true};
+						}
+						else{
+							str=get.translation(target)+'胜利';
+							target.popup('胜','wood');
+							player.popup('负','fire');
+							game.log(target,'#g胜');
+							event.result={bool:false};
+						}
+					}
+					game.broadcastAll(function(str){
+						var dialog=ui.create.dialog(str);
+						dialog.classList.add('center');
+						setTimeout(function(){
+							dialog.close();
+						},1000);
+					},str);
+					game.delay(2);
+					'step 6'
+					game.broadcastAll(function(){
+						ui.arena.classList.remove('thrownhighlight');
+					});
+					game.addVideo('thrownhighlight2');
+					if(event.clear!==false){
+						game.broadcastAll(ui.clear);
+					}
+				},
 				cardsDiscard:function(){
 					for(var i=0;i<cards.length;i++){
 						cards[i].discard();
@@ -11187,8 +11363,16 @@
 					};
 					"step 2"
 					var cards=[];
+					if(result[0].skill&&lib.skill[result[0].skill]&&lib.skill[result[0].skill].onCompare){
+						player.logSkill(result[0].skill);
+						result[0].cards=lib.skill[result[0].skill].onCompare(player)
+					};
 					player.lose(result[0].cards,ui.special);
 					for(var i=1;i<result.length;i++){
+						if(result[i].skill&&lib.skill[result[i].skill]&&lib.skill[result[i].skill].onCompare){
+							event.list[i].logSkill(result[i].skill);
+							result[i].cards=lib.skill[result[i].skill].onCompare(event.list[i]);
+						}
 						event.list[i].lose(result[i].cards,ui.special);
 						cards.push(result[i].cards[0]);
 					}
@@ -11316,6 +11500,10 @@
 					}
 					"step 2"
 					if(event.localPlayer){
+						if(result.skill&&lib.skill[result.skill]&&lib.skill[result.skill].onCompare){
+							result.cards=lib.skill[result.skill].onCompare(player);
+							player.logSkill(result.skill);
+						}
 						event.card1=result.cards[0];
 					}
 					if(event.localTarget){
@@ -11323,6 +11511,10 @@
 					}
 					"step 3"
 					if(event.localTarget){
+						if(result.skill&&lib.skill[result.skill]&&lib.skill[result.skill].onCompare){
+							target.logSkill(result.skill);
+							result.cards=lib.skill[result.skill].onCompare(target);
+						}
 						event.card2=result.cards[0];
 					}
 					if(!event.resultOL&&event.ol){
@@ -11330,8 +11522,20 @@
 					}
 					"step 4"
 					try{
-						if(!event.card1) event.card1=event.resultOL[player.playerid].cards[0];
-						if(!event.card2) event.card2=event.resultOL[target.playerid].cards[0];
+						if(!event.card1){
+							if(event.resultOL[player.playerid].skill&&lib.skill[event.resultOL[player.playerid].skill]&&lib.skill[event.resultOL[player.playerid].skill].onCompare){
+								player.logSkill(event.resultOL[player.playerid].skill);
+								event.resultOL[player.playerid].cards=lib.skill[event.resultOL[player.playerid].skill].onCompare(player);
+							}
+							event.card1=event.resultOL[player.playerid].cards[0]
+						};
+						if(!event.card2){
+							if(event.resultOL[target.playerid].skill&&lib.skill[event.resultOL[target.playerid].skill]&&lib.skill[event.resultOL[target.playerid].skill].onCompare){
+								target.logSkill(event.resultOL[target.playerid].skill);
+								event.resultOL[target.playerid].cards=lib.skill[target.resultOL[target.playerid].skill].onCompare(player);
+							}
+							event.card2=event.resultOL[target.playerid].cards[0];
+						}
 						if(!event.card1||!event.card2){
 							throw('err');
 						}
@@ -13467,7 +13671,7 @@
 							lib.skill[event.skill].onrespond(event,player);
 						}
 					}
-					else if(lib.config.show_card_prompt&&!lib.config.hide_card_prompt_basic){
+					else if(!event.nopopup&&lib.config.show_card_prompt&&!lib.config.hide_card_prompt_basic){
 						player.popup(card.name,'wood');
 					}
 					if(cardaudio&&event.getParent(3).name=='useCard'){
@@ -14564,6 +14768,20 @@
 			},
 			player:{
 				//新函数
+				chooseToDuiben:function(target){
+					var next=game.createEvent('chooseToDuiben');
+					next.player=this;
+					next.target=target;
+					next.setContent('chooseToDuiben');
+					return next;
+				},
+				chooseToPSS:function(target){
+					var next=game.createEvent('chooseToPSS');
+					next.player=this;
+					next.target=target;
+					next.setContent('chooseToPSS');
+					return next;
+				},
 				chooseToEnable:function(){
         var next=game.createEvent('chooseToEnable');
         next.player=this;
@@ -15151,6 +15369,7 @@
 					},this.playerid,str);
 				},
 				say:function(str){
+					str=str.replace(/##assetURL##/g,lib.assetURL);
 					var dialog=ui.create.dialog('hidden');
 					dialog.classList.add('static');
 					dialog.add('<div class="text" style="word-break:break-all;display:inline">'+str+'</div>');
@@ -16324,6 +16543,10 @@
 						next.targets=target;
 						if(check) next.ai=check;
 						else next.ai=function(card){
+							if(typeof card=='string'&&lib.skill[card]){
+								var ais=lib.skill[card].check||function(){return 0};
+								return ais();
+							}
 							var addi=(get.value(card)>=8&&get.type(card)!='equip')?-10:0;
 							if(card.name=='du') addi+=5;
 							var source=_status.event.source;
@@ -16339,6 +16562,10 @@
 						next.target=target;
 						if(check) next.ai=check;
 						else next.ai=function(card){
+							if(typeof card=='string'&&lib.skill[card]){
+								var ais=lib.skill[card].check||function(){return 0};
+								return ais();
+							}
 							var player=get.owner(card);
 							var event=_status.event.getParent();
 							var to=(player==event.player?event.target:event.player);
@@ -18687,6 +18914,7 @@
 						}
 						this._hookTrigger.add(skill);
 					}
+					if(_status.event&&_status.event.addTrigger) _status.event.addTrigger(skill,this);
 					return this;
 				},
 				addSkillLog:function(skill){
@@ -18715,7 +18943,6 @@
 							this.awakenSkill(skill);
 							return;
 						}
-						if(_status.event&&_status.event.addTrigger) _status.event.addTrigger(skill,this);
 						if(info.init2&&!_status.video){
 							info.init2(this,skill);
 						}
@@ -21973,8 +22200,15 @@
 							if(info.filterCard!=undefined){
 								this.filterCard=function(card,player,event){
 									if(!info.ignoreMod&&player){
-										var mod=game.checkMod(card,player,'unchanged','cardEnabled',player);
-										if(mod!='unchanged') return mod;
+										if(!event) event=_status.event;
+										if(event.name=='chooseToUse'){
+											var mod=game.checkMod(card,player,'unchanged','cardEnabled',player);
+											if(mod!='unchanged') return mod;
+										}
+										if(event.name=='chooseToRespond'){
+											var mod=game.checkMod(card,player,'unchanged','cardRespondable',player);
+											if(mod!='unchanged') return mod;
+										}
 									}
 									return get.filter(info.filterCard)(card,player,event);
 								};
@@ -28945,7 +29179,8 @@
 				var dialog=event.dialog;
 				range=get.select(event.selectButton);
 				var selectableButtons=false;
-				if(range[0]!=range[1]||range[0]>1) auto=false;
+				if(event.forceAuto&&ui.selected.buttons.length==range[1]) auto=true;
+				else if(range[0]!=range[1]||range[0]>1) auto=false;
 				for(i=0;i<dialog.buttons.length;i++){
 					if(dialog.buttons[i].classList.contains('unselectable')) continue;
 					if(event.filterButton(dialog.buttons[i],player)&&lib.filter.buttonIncluded(dialog.buttons[i])){
@@ -42018,6 +42253,72 @@
 					list.scrollTop=list.scrollHeight;
 				};
 				uiintro._heightfixed=true;
+				var emotionTitle=ui.create.div('.text.center','聊天表情');
+				emotionTitle.style.width='calc(100%)';
+				uiintro.add(emotionTitle);
+				var list1=ui.create.div('');
+				if(get.is.phoneLayout()){
+					list1.style.height='100px';
+				}
+				else{
+					list1.style.height='150px';
+				}
+				list1.style.overflow='scroll';
+				uiintro.add(list1);
+				uiintro.style.height=uiintro.content.offsetHeight+'px';
+				var list2=ui.create.div('');
+				if(get.is.phoneLayout()){
+					list2.style.height='100px';
+				}
+				else{
+					list2.style.height='150px';
+				}
+				list2.style.overflow='scroll';
+				uiintro.add(list2);
+				uiintro.style.height=uiintro.content.offsetHeight+'px';
+				for(var i in lib.emotionList){
+					var emotionPack=ui.create.div('.card.fullskin','<img src="'+lib.assetURL+'image/emotion/'+i+'/1.gif" width="50" height="50">',function(){
+						emotionTitle.innerHTML=get.translation(this.pack);
+						for(var j=1;j<=lib.emotionList[this.pack];j++){
+							var emotionButton=ui.create.div('.card.fullskin','<img src="'+lib.assetURL+'image/emotion/'+this.pack+'/'+j+'.gif" width="50" height="50">',function(){
+								var player=game.me;
+								var str='<img src="##assetURL##image/emotion/'+this.pack+'/'+this.emotionID+'.gif" width="50" height="50">';
+								if(!player){
+									if(game.connectPlayers){
+										if(game.online){
+											for(var i=0;i<game.connectPlayers.length;i++){
+												if(game.connectPlayers[i].playerid==game.onlineID){
+													player=game.connectPlayers[i];break;
+												}
+											}
+										}
+										else{
+											player=game.connectPlayers[0];
+										}
+									}
+								}
+								if(!player) return;
+								if(game.online){
+									game.send('chat',game.onlineID,str);
+								}
+								else{
+									lib.element.player.chat.call(player,str);
+								}
+							});
+							emotionButton.emotionID=j;
+							emotionButton.pack=this.pack;
+							emotionButton.style.height='50px';
+							emotionButton.style.width='50px';
+							list2.appendChild(emotionButton);
+						}
+						list1.delete();
+						uiintro.add(list2);
+					});
+					emotionPack.pack=i;
+					emotionPack.style.height='50px';
+					emotionPack.style.width='50px';
+					list1.appendChild(emotionPack);
+				}
 				return uiintro;
 			},
 			volumn:function(){
@@ -43726,7 +44027,7 @@
 				}
 				if(event.skill){
 					event.result.skill=event.skill;
-					event.result.card=get.info(event.skill).viewAs;
+					event.result.card=get.copy(get.info(event.skill).viewAs);
 					if(event.result.cards.length==1&&event.result.card){
 						event.result.card.suit=event.result.cards[0].suit;
 						event.result.card.number=event.result.cards[0].number;
@@ -46268,6 +46569,9 @@
 			if(str2.indexOf('SP')==0){
 				str2=str2.slice(2);
 			}
+			else if(str2.indexOf('TW')==0){
+				str2=str2.slice(2);
+			}
 			else if(str2.indexOf('JSP')==0){
 				str2=str2.slice(3);
 			}
@@ -46294,6 +46598,9 @@
 			if(str2.indexOf('SP')==0){
 				str2=str2.slice(2);
 			}
+			else if(str2.indexOf('TW')==0){
+				str2=str2.slice(2);
+			}
 			else if(str2.indexOf('JSP')==0){
 				str2=str2.slice(3);
 			}
@@ -46309,6 +46616,9 @@
 			var str2=lib.translate[str];
 			if(!str2) return '';
 			if(str2.indexOf('SP')==0){
+				str2=str2.slice(2);
+			}
+			else if(str2.indexOf('TW')==0){
 				str2=str2.slice(2);
 			}
 			else if(str2.indexOf('JSP')==0){
