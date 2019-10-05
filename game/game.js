@@ -9490,6 +9490,77 @@
 		},
 		element:{
 			content:{
+				chooseUseTarget:function(){
+					'step 0'
+					if(cards&&get.itemtype(card)!='card'){
+						card=get.copy(card);
+						card.cards=cards.slice(0);
+						event.card=card;
+					}
+					if(!lib.filter.cardEnabled(card,player)){
+						event.finish();
+						return;
+					}
+					var info=get.info(card);
+					var select=get.select(info.selectTarget);
+					if(select[1]==-1||info.notarget){
+						if(select[1]==-1){
+							for(var i=0;i<targets.length;i++){
+								if(!player.canUse(card,targets[i],false)){
+									targets.splice(i--,1);
+								}
+							}
+							if(targets.length){
+								event.targets2=targets;
+							}
+							else event.finish();
+						}
+						else event.targets2=[];
+						if(!event.forced){
+							player.chooseBool('是否'+(event.targets2.length?'对':'')+get.translation(event.targets2)+'使用'+get.translation(card)+'?');
+						}
+						else event._result={bool:true};
+					}
+					else{
+						var next=player.chooseTarget();
+						next._get_card=card;
+						next.filterTarget=function(card,player,target){
+							if(!_status.event.targets.contains(target)) return false;
+							return lib.filter[_status.event.nodistance?'targetEnabled':'filterTarget'].apply(this,arguments);
+						};
+						next.set('ai',event.ai||get.effect);
+						if(typeof info.selectTarget=='function'){
+							next.selectTarget=info.selectTarget;
+						}
+						else{
+							next.selectTarget=get.select(info.selectTarget);
+						}
+						if(event.nodistance) next.nodistance=true;
+						if(event.forced) next.forced=true;
+						next.targets=targets;
+						next.prompt=event.prompt||('选择'+get.translation(card)+'的目标');
+					if(event.prompt2) next.prompt2=event.prompt2;
+					}
+					'step 1'
+					if(result.bool){
+						event._result={
+							bool:true,
+							targets:event.targets2||result.targets,
+						};
+						if(event.logSkill){
+							if(typeof event.logSkill=='string'){
+								player.logSkill(event.logSkill);
+							}
+							else if(Array.isArray(event.logSkill)){
+								player.logSkill.apply(player,event.logSkill);
+							}
+						}
+						var next=player.useCard(card,event.targets2||result.targets,cards);
+						if(event.nopopup) next.nopopup=true;
+						if(event.animate===false) next.animate=false;
+						if(event.addCount===false) next.addCount=false;
+					}
+				},
 				chooseToDuiben:function(){
 					'step 0'
 					game.log(player,'对',target,'发起了','#y对策');
@@ -9568,11 +9639,11 @@
 				},
 				chooseToPSS:function(){
 					'step 0'
-					game.log(player,'对',target,'发起了石头剪刀布');
+					game.log(player,'对',target,'发起了猜拳');
 					if(_status.connectMode){
 						player.chooseButtonOL([
-							[player,['石头剪刀布：请选择一种手势',[[['','','pss_stone'],['','','pss_scissor'],['','','pss_paper']],'vcard']],true],
-							[target,['石头剪刀布：请选择一种手势',[[['','','pss_stone'],['','','pss_scissor'],['','','pss_paper']],'vcard']],true]
+							[player,['猜拳：请选择一种手势',[[['','','pss_stone'],['','','pss_scissor'],['','','pss_paper']],'vcard']],true],
+							[target,['猜拳：请选择一种手势',[[['','','pss_stone'],['','','pss_scissor'],['','','pss_paper']],'vcard']],true]
 						],function(){},function(){return 1+Math.random()}).set('switchToAuto',function(){
 							_status.event.result='ai';
 						}).set('processAI',function(){
@@ -9590,11 +9661,11 @@
 						event.goto(4);
 					}
 					else{
-						player.chooseButton(['石头剪刀布：请选择一种手势',[[['','','pss_stone'],['','','pss_scissor'],['','','pss_paper']],'vcard']],true).ai=function(){return 1+Math.random()};
+						player.chooseButton(['猜拳：请选择一种手势',[[['','','pss_stone'],['','','pss_scissor'],['','','pss_paper']],'vcard']],true).ai=function(){return 1+Math.random()};
 					}
 					'step 2'
 					event.mes=result.links[0][2];
-					target.chooseButton(['石头剪刀布：请选择一种手势',[[['','','pss_stone'],['','','pss_scissor'],['','','pss_paper']],'vcard']],true).ai=function(){return 1+Math.random()};
+					target.chooseButton(['猜拳：请选择一种手势',[[['','','pss_stone'],['','','pss_scissor'],['','','pss_paper']],'vcard']],true).ai=function(){return 1+Math.random()};
 					'step 3'
 					event.tes=result.links[0][2];
 					'step 4'
@@ -9615,7 +9686,7 @@
 						str='二人平局';
 						player.popup('平','metal');
 						target.popup('平','metal');
-						game.log('石头剪刀布的结果为','#g平局');
+						game.log('猜拳的结果为','#g平局');
 						event.result={tie:true};
 					}
 					else{
@@ -9992,7 +10063,7 @@
 					}
 					player.chooseControl('顺时针','逆时针',function(event,player){
 						return _status.event.choice||'逆时针';
-					}).set('prompt','选择'+get.translation(card)+'的结算方向').set('choice',choice);
+					}).set('prompt','选择'+get.translation(card)+'的结算方向').set('choice',choice).set('forceDie',true);
 					"step 2"
 					if(result&&result.control=='顺时针'){
 						var evt=event.getParent();
@@ -13026,6 +13097,7 @@
 						event.finish();
 						return;
 					}
+					if(!get.info(card).noForceDie) event.forceDie=true;
 					var next=player.lose(cards).set('type','use');
 					for(var i=0;i<cards.length;i++){
 						if(!next.cards.contains(cards[i])){
@@ -13226,6 +13298,7 @@
 						next.cards=cards;
 						next.player=player;
 						next.type='precard';
+						if(event.forceDie) next.forceDie=true;
 					}
 					else if(info.reverseOrder&&get.is.versus()&&targets.length>1){
 						var next=game.createEvent(card.name+'ContentBefore');
@@ -13235,6 +13308,7 @@
 						next.cards=cards;
 						next.player=player;
 						next.type='precard';
+						if(event.forceDie) next.forceDie=true;
 					}
 					"step 2"
 					var info=get.info(card);
@@ -13269,6 +13343,7 @@
 					next.skill=event.skill;
 					next.multitarget=info.multitarget;
 					next.preResult=event.preResult;
+					if(event.forceDie) next.forceDie=true;
 					if(event.addedTargets){
 						next.addedTargets=event.addedTargets;
 						next.addedTarget=event.addedTarget;
@@ -13318,6 +13393,7 @@
 						next.player=player;
 						next.preResult=event.preResult;
 						next.type='postcard';
+						if(event.forceDie) next.forceDie=true;
 					}
 					"step 5"
 					if(event.postAi){
@@ -13339,6 +13415,7 @@
 				useSkill:function(){
 					"step 0"
 					var info=get.info(event.skill);
+					if(!info.noForceDie) event.forceDie=true;
 					event._skill=event.skill;
 					game.trySkillAudio(event.skill,player);
 					var checkShow=player.checkShow(event.skill);
@@ -13463,6 +13540,7 @@
 						next.targets=targets;
 						next.cards=cards;
 						next.player=player;
+						if(event.forceDie) next.forceDie=true;
 					}
 					"step 2"
 					if(!event.skill){
@@ -13504,6 +13582,7 @@
 						}
 					}
 					next.target=targets[num];
+					if(event.forceDie) next.forceDie=true;
 					if(next.target&&!info.multitarget){
 						if(num==0&&targets.length>1){
 							// var ttt=next.target;
@@ -13538,6 +13617,7 @@
 						next.targets=targets;
 						next.cards=cards;
 						next.player=player;
+						if(event.forceDie) next.forceDie=true;
 					}
 					"step 4"
 					if(player.getStat().allSkills>200){
@@ -13805,7 +13885,7 @@
 					if(cards){
 						var owner=event.source||get.owner(cards[0]);
 						if(owner){
-							owner.lose(cards,ui.special).set('type','gain');
+							owner.lose(cards,ui.special).set('type','gain').set('forceDie',true);
 						}
 					}
 					else{
@@ -14654,7 +14734,7 @@
 					"step 0"
 					var judgestr=get.translation(player)+'的'+event.judgestr+'判定';
 					event.videoId=lib.status.videoId++;
-					player.judging.unshift(get.cards()[0]);
+					player.judging.unshift(event.directresult||get.cards()[0]);
 					game.addVideo('judge1',player,[get.cardInfo(player.judging[0]),judgestr,event.videoId]);
 					game.broadcastAll(function(player,card,str,id,cardid){
 						var event;
@@ -14688,9 +14768,14 @@
 						number:get.number(player.judging[0]),
 						suit:get.suit(player.judging[0]),
 						color:get.color(player.judging[0]),
-						judge:event.judge(player.judging[0]),
 						node:event.node,
 					};
+					if(event.fixedResult){
+						for(var i in event.fixedResult){
+							event.result[i]=event.fixedResult[i];
+						}
+					}
+					event.result.judge=event.judge(event.result);
 					if(event.result.judge>0) event.result.bool=true;
 					else if(event.result.judge<0) event.result.bool=false;
 					else event.result.bool=null;
@@ -16765,73 +16850,56 @@
 					next._args=Array.from(arguments);
 					return next;
 				},
-				chooseUseTarget:function(card,prompt,includecard){
-					// not online-ready
-					if(typeof card=='string'){
-						card={name:card};
-					}
-					var discard=function(){
-						if(get.itemtype(card)=='card'&&card.discard){
-							card.discard();
+				chooseUseTarget:function(){
+					var next=game.createEvent('chooseUseTarget');
+					next.player=this;
+					for(var i=0;i<arguments.length;i++){
+						if(get.itemtype(arguments[i])=='cards'){
+							next.cards=arguments[i];
 						}
-					};
-					var name=card.name;
-					var info=lib.card[name];
-					if(!info.enable){
-						discard();
-						return false;
-					}
-					var player=this;
-					if(get.select(info.selectTarget)[1]==-1){
-						var targets=game.filterPlayer(function(current){
-							return lib.filter.filterTarget(card,player,current);
-						});
-						if(targets.length){
-							targets.sort(lib.sort.seat);
-							var next=player.useCard(card,targets);
-							if(includecard===false){
-								next.addCount=false;
+						else if(get.itemtype(arguments[i])=='card'){
+							next.card=arguments[i];
+						}
+						else if(typeof arguments[i]=='object'&&arguments[i].name){
+							next.card=arguments[i];
+						}
+						else if(typeof arguments[i]=='string'){
+							if(arguments[i]=='nopopup'){
+								next.nopopup=true;
 							}
-							return next;
+							else if(arguments[i]=='noanimate'){
+								next.animate=false;
+							}
+							else if(arguments[i]=='nodistance'){
+								next.nodistance=true;
+							}
+							else if(lib.card[arguments[i]]&&!next.card){
+								next.card={name:arguments[i]};
+							}
+							else get.evtprompt(next,arguments[i]);
 						}
-					}
-					else if(info.notarget){
-						var next=player.useCard(card);
-						if(includecard===false){
+						else if(arguments[i]===true){
+							next.forced=true;
+						}
+						else if(arguments[i]===false){
 							next.addCount=false;
 						}
-						return next;
 					}
-					else if(game.hasPlayer(function(current){
-						return player.canUse(card,current);
-					})){
-						var next=player.chooseTarget(prompt||'选择'+get.translation(card)+'的目标');
-						next._get_card=card;
-						next.filterTarget=lib.filter.filterTarget;
-						next.ai=get.effect;
-						if(typeof info.selectTarget=='function'){
-							next.selectTarget=info.selectTarget;
+					if(!next.targets) next.targets=game.players.slice(0);
+					if(next.cards==undefined){
+						if(get.itemtype(next.card)=='card'){
+							next.cards=[next.card];
 						}
-						else{
-							next.selectTarget=get.select(info.selectTarget);
-						}
-						next.forced=true;
-						next.onresult=function(result){
-							if(result.bool){
-								if(info.multitarget&&result.targets.length<get.select(info.selectTarget)[0]){
-									discard();
-									return false;
-								}
-								var next=player.useCard(card,result.targets);
-								if(includecard===false){
-									next.addCount=false;
-								}
-								return next;
-							}
+						else next.cards=[];
+					}
+					else if(next.card==undefined){
+						if(next.cards){
+							next.card=next.cards[0];
 						}
 					}
-					discard();
-					return false;
+					next.setContent('chooseUseTarget');
+					return next;
+					// Online-Ready! Enjoy It!
 				},
 				chooseTarget:function(){
 					var next=game.createEvent('chooseTarget');
@@ -17682,6 +17750,7 @@
 				lose:function(){
 					var next=game.createEvent('lose');
 					next.player=this;
+					next.forceDie=true;
 					for(var i=0;i<arguments.length;i++){
 						if(get.itemtype(arguments[i])=='player'){
 							next.source=arguments[i];
@@ -19317,7 +19386,7 @@
 						exclude.push(arguments[i]);
 					}
 					for(i=0;i<this.skills.length;i++){
-						if(!all&&lib.skill[this.skills[i]].temp) continue;
+						if(!all&&(lib.skill[this.skills[i]].temp||lib.skill[this.skills[i]].charlotte)) continue;
 						if(!exclude.contains(this.skills[i])){
 							list.push(this.skills[i]);
 						}
@@ -46786,12 +46855,6 @@
 			}
 		},
 		number:function(card){
-			if(_status.event.name=='judge'){
-				var owner=get.owner(card);
-				if(owner){
-					if(owner.hasSkill('zhenyi_spade_red')||owner.hasSkill('zhenyi_spade_black')) return 5;
-				}
-			}
 			return card.number;
 		},
 		nature:function(card){

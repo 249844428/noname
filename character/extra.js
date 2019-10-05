@@ -155,16 +155,17 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 								var card=cards.randomGet();
 								player.gain(card);
 								target.$giveAuto(card,player);
-								game.delay(0.3);
 								break;
 							}
 						}
 						event.num++;
-						event.redo();
 					}
 					"step 4"
-					player.turnOver();
+					game.delay(0.7);
+					if(num<event.targets.length) event.goto(3);
 					"step 5"
+					player.turnOver();
+					"step 6"
 					event.count--;
 					if(event.count){
 						player.chooseBool(get.prompt2('new_guixin')).ai=function(){
@@ -174,7 +175,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					else{
 						event.finish();
 					}
-					"step 6"
+					"step 7"
 					if(event.count&&result.bool){
 						player.logSkill('new_guixin');
 						event.goto(1);
@@ -354,6 +355,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				},
 				content:function(){
 					"step 0"
+					event.forceDie=true;
 					if(typeof event.count!='number'){
 						// event.count=trigger.cards.length-1;
 						event.count=1;
@@ -1251,7 +1253,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 						player.unmarkSkill('qixing');
 					}
 					game.addVideo('storage',player,['qixing',get.cardsInfo(player.storage.qixing),'cards']);
-					player.discard(result.links);
+					game.cardsDiscard(result.links);
 				},
 				group:'dawu3'
 			},
@@ -1286,11 +1288,11 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					for(var i=0;i<game.players.length;i++){
 						if(game.players[i].hasSkill('dawu2')){
 							game.players[i].removeSkill('dawu2');
-							game.players[i].popup('dawu2');
+							//game.players[i].popup('dawu2');
 						}
 						if(game.players[i].hasSkill('kuangfeng2')){
 							game.players[i].removeSkill('kuangfeng2');
-							game.players[i].popup('kuangfeng2');
+							//game.players[i].popup('kuangfeng2');
 						}
 					}
 				}
@@ -1328,7 +1330,8 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 						player.unmarkSkill('qixing');
 					}
 					game.addVideo('storage',player,['qixing',get.cardsInfo(player.storage.qixing),'cards']);
-					player.discard(result.links);
+					game.cardsDiscard(result.links);
+					game.log(player,'将',result.links,'置入了弃牌堆')
 				},
 			},
 			kuangfeng2:{
@@ -1355,6 +1358,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 			},
 			yeyan:{
 				unique:true,
+				forceDie:true,
 				enable:'phaseUse',
 				audio:3,
 				animationColor:'metal',
@@ -1405,7 +1409,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 							return targets.contains(target)
 						}).set('ai',function(target){
 							return 1;
-						});
+						}).set('forceDie',true);
 					}
 					"step 3"
 					if(event.num<targets.length){
@@ -1419,7 +1423,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					"step 4"
 					player.chooseControl("2点","3点").set('prompt','请选择伤害点数').set('ai',function(){
 						return "3点";
-					});
+					}).forceDie=true;
 					"step 5"
 					targets[0].damage('fire',result.control=="2点"?2:3,'nocard'); 
 				},
