@@ -4620,9 +4620,10 @@
 						item:{
 							disabled:'不启用',
 							online:'Online',
+							rewrite:'Rewrite',
 							chaoming:'潮鸣',
 						},
-						init:'chaoming',
+						init:'rewrite',
 						onclick:function(item){
 							game.saveConfig('aozhan_bgm',item,this._link.config.mode);
 							if(_status._aozhan==true) game.playBackgroundMusic();
@@ -9496,6 +9497,9 @@
 		},
 		element:{
 			content:{
+				emptyEvent:function(){
+					event.trigger(event.name);
+				},
 				chooseUseTarget:function(){
 					'step 0'
 					if(cards&&get.itemtype(card)!='card'){
@@ -12745,7 +12749,7 @@
 						player.line(target,'green');
 					}
 					if(!event.chooseonly){
-						var next=target.discard(event.cards);
+						var next=target.discard(event.cards,'notBySelf');
 						if(event.delay===false){
 							next.set('delay',false);
 						}
@@ -12891,7 +12895,7 @@
 						player.line(target,'green');
 					}
 					if(!event.chooseonly){
-						var next=player.gain(event.cards,target,event.visibleMove?'give':'giveAuto');
+						var next=player.gain(event.cards,target,event.visibleMove?'give':'giveAuto','bySelf');
 						if(event.delay===false){
 							next.set('delay',false);
 						}
@@ -13177,8 +13181,9 @@
 										game.playAudio('card',sex,card.name+'_'+card.nature);
 									}
 									else{
-										if(typeof audioinfo=='string'&&audioinfo.indexOf('ext:')==0){
-											game.playAudio('..','extension',audioinfo.slice(4),card.name+'_'+sex);
+										if(typeof audioinfo=='string'){
+											if(audioinfo.indexOf('ext:')==0) game.playAudio('..','extension',audioinfo.slice(4),card.name+'_'+sex);
+											else game.playAudio('card',sex,audioinfo);
 										}
 										else{
 											game.playAudio('card',sex,card.name);
@@ -13241,6 +13246,11 @@
 						event.oncard(event.card,event.player);
 					}
 					event.excluded=[];
+					event.directHit=[];
+					event.trigger('useCard1');
+					"step 1"
+					event.trigger('useCard2');
+					"step 2"
 					event.trigger('useCard');
 					event._oncancel=function(){
 						game.broadcastAll(function(id){
@@ -13308,7 +13318,7 @@
 							}
 						}
 					}
-					"step 1"
+					"step 3"
 					var info=get.info(card);
 					if(info.contentBefore){
 						var next=game.createEvent(card.name+'ContentBefore');
@@ -13330,23 +13340,97 @@
 						next.type='precard';
 						if(event.forceDie) next.forceDie=true;
 					}
-					"step 2"
-					var info=get.info(card);
-					if(num==0&&targets.length>1){
-						if(!info.multitarget){
-							if(!event.fixedSeat){
-								targets.sortBySeat(player);
+					"step 4"
+					event.sortTarget=function(animate){
+						var info=get.info(card);
+						if(num==0&&targets.length>1){
+							if(!info.multitarget){
+								if(!event.fixedSeat){
+									targets.sortBySeat(player);
+								}
+								if(animate)	for(var i=0;i<targets.length;i++){
+									targets[i].animate('target');
+								}
 							}
-							for(var i=0;i<targets.length;i++){
-								targets[i].animate('target');
-							}
-						}
-						else{
-							for(var i=0;i<targets.length;i++){
-								targets[i].animate('target');
+						else if(animate){
+								for(var i=0;i<targets.length;i++){
+									targets[i].animate('target');
+								}
 							}
 						}
 					}
+					event.sortTarget();
+					event.getTriggerTarget=function(list1,list2){
+						for(var i=0;i<list1.length;i++){
+							if(!list2.contains(list1[i])) return list1[i];
+						}
+						return null;
+					}
+					"step 5"
+					if(!event.triggeredTargets1) event.triggeredTargets1=[];
+					var target=event.getTriggerTarget(targets,event.triggeredTargets1);
+					if(target){
+						event.triggeredTargets1.push(target);
+						var next=game.createEvent('useCardToPlayer',false);
+						next.setContent('emptyEvent');
+						next.targets=targets;
+						next.target=target;
+						next.card=card;
+						next.cards=cards;
+						next.player=player;
+						if(event.forceDie) next.forceDie=true;
+						event.redo();
+					}
+					"step 6"
+					if(!event.triggeredTargets2) event.triggeredTargets2=[];
+					var target=event.getTriggerTarget(targets,event.triggeredTargets2);
+					if(target){
+						event.triggeredTargets2.push(target);
+						var next=game.createEvent('useCardToTarget',false);
+						next.setContent('emptyEvent');
+						next.targets=targets;
+						next.target=target;
+						next.card=card;
+						next.cards=cards;
+						next.player=player;
+						if(event.forceDie) next.forceDie=true;
+						event.redo();
+					}
+					"step 7"
+					if(!event.triggeredTargets3) event.triggeredTargets3=[];
+					var target=event.getTriggerTarget(targets,event.triggeredTargets3);
+					if(target){
+						event.triggeredTargets3.push(target);
+						var next=game.createEvent('useCardToPlayered',false);
+						next.setContent('emptyEvent');
+						next.targets=targets;
+						next.target=target;
+						next.card=card;
+						next.cards=cards;
+						next.player=player;
+						if(event.forceDie) next.forceDie=true;
+						event.redo();
+					}
+					"step 8"
+					if(!event.triggeredTargets4) event.triggeredTargets4=[];
+					var target=event.getTriggerTarget(targets,event.triggeredTargets4);
+					if(target){
+						event.triggeredTargets4.push(target);
+						var next=game.createEvent('useCardToTargeted',false);
+						next.setContent('emptyEvent');
+						next.targets=targets;
+						next.target=target;
+						next.card=card;
+						next.cards=cards;
+						next.player=player;
+						if(event.forceDie) next.forceDie=true;
+						event.redo();
+					}
+					"step 9"
+					if(num==0&&targets.length>1){
+						event.sortTarget(true);
+					}
+					var info=get.info(card);
 					if(targets[num]&&targets[num].isDead()) return;
 					if(targets[num]&&targets[num].isOut()) return;
 					if(targets[num]&&targets[num].removed) return;
@@ -13374,6 +13458,7 @@
 						event.targetDelay=false;
 					}
 					next.target=targets[num];
+					if(next.target&&event.directHit.contains(next.target)) next.directHit=true;
 					if(next.target&&!info.multitarget){
 						if(num==0&&targets.length>1){
 							// var ttt=next.target;
@@ -13399,12 +13484,12 @@
 							game.delayx(0.5);
 						}
 					}
-					"step 3"
+					"step 10"
 					if(!get.info(event.card).multitarget&&num<targets.length-1&&!event.cancelled){
 						event.num++;
-						event.goto(2);
+						event.goto(9);
 					}
-					"step 4"
+					"step 11"
 					if(get.info(card).contentAfter){
 						var next=game.createEvent(card.name+'ContentAfter');
 						next.setContent(get.info(card).contentAfter);
@@ -13416,7 +13501,7 @@
 						next.type='postcard';
 						if(event.forceDie) next.forceDie=true;
 					}
-					"step 5"
+					"step 12"
 					if(event.postAi){
 						event.player.logAi(event.targets,event.card);
 					}
@@ -13430,7 +13515,7 @@
 					else{
 						event.finish();
 					}
-					"step 6"
+					"step 13"
 					event._oncancel();
 				},
 				useSkill:function(){
@@ -13887,11 +13972,11 @@
 					var card=event.cardlist[num];
 					if(card&&event.cards.contains(card)){
 						if(current==game.me||current.isOnline()||(player==game.me&&!event.delayed)){
-							player.gain(card,current);
+							player.gain(card,current,'bySelf');
 							event.delayed=true;
 						}
 						else{
-							player.gain(card,current).set('delay',false);
+							player.gain(card,current,'bySelf').set('delay',false);
 						}
 					}
 					event.num++;
@@ -14888,6 +14973,9 @@
 			},
 			player:{
 				//新函数
+				getDamagedHp:function(){
+					return this.maxHp-Math.max(0,this.hp);
+				},
 				changeGroup:function(group,log){
 					game.broadcastAll(function(player,group){
 						player.group=group;
@@ -15549,7 +15637,8 @@
 					setTimeout(function(){
 						dialog.delete();
 					},2000);
-					var info=[get.translation(this.name)||this.nickname,str];
+					var name=get.translation(this.name);
+					var info=[name?(name+'['+this.nickname+']'):this.nickname,str];
 					lib.chatHistory.push(info);
 					if(_status.addChatEntry){
 						if(_status.addChatEntry._origin.parentNode){
@@ -16908,6 +16997,12 @@
 						else if(get.itemtype(arguments[i])=='card'){
 							next.card=arguments[i];
 						}
+						else if(get.itemtype(arguments[i])=='players'){
+							next.targets=arguments[i];
+						}
+						else if(get.itemtype(arguments[i])=='player'){
+							next.targets=[arguments[i]];
+						}
 						else if(typeof arguments[i]=='object'&&arguments[i].name){
 							next.card=arguments[i];
 						}
@@ -17583,7 +17678,7 @@
 					}
 					var cards=this.getCards(position).randomGets(num);
 					if(cards.length){
-						var next=this.discard(cards);
+						var next=this.discard(cards,'notBySelf');
 						if(typeof delay=='boolean'){
 							next.delay=delay;
 						}
@@ -17612,7 +17707,7 @@
 							if(line){
 								this.line(target,'green');
 							}
-							this.gain(cards,target,'log');
+							this.gain(cards,target,'log','bySelf');
 							target.$giveAuto(cards,this);
 						}
 						return cards;
@@ -17638,6 +17733,9 @@
 						}
 						else if(get.objtype(arguments[i])=='div'){
 							next.position=arguments[i];
+						}
+						else if(arguments[i]=='notBySelf'){
+							next.notBySelf=true;
 						}
 					}
 					if(next.cards==undefined) _status.event.next.remove(next);
@@ -17756,6 +17854,9 @@
 						}
 						else if(arguments[i]=='fromStorage'){
 							next.fromStorage=true;
+						}
+						else if(arguments[i]=='bySelf'){
+							next.bySelf=true;
 						}
 						else if(typeof arguments[i]=='string'){
 							next.animate=arguments[i];
@@ -19585,7 +19686,7 @@
 					return (range);
 				},
 				getHandcardLimit:function(){
-					return Math.max(0,game.checkMod(this,this.hp,'maxHandcard',this));
+					return Math.max(0,game.checkMod(this,Math.max(0,this.hp),'maxHandcard',this));
 				},
 				getEnemies:function(func){
 					var player=this;
@@ -22463,7 +22564,7 @@
 					if(!lib.hookmap[name]&&!lib.config.compatiblemode) return;
 					if(!game.players||!game.players.length) return;
 					var event=this;
-					var start=event.player||game.me||game.players[0];
+					var start=event.source||event.player||game.me||game.players[0];
 					if(!game.players.contains(start)){
 						start=game.findNext(start);
 					}
@@ -45657,6 +45758,7 @@
 						_status.maxShuffle--;
 					}
 					game.shuffleNumber++;
+					if(_status.event.trigger) _status.event.trigger('washCard');
 					var cards=[],i;
 					for(var i=0;i<lib.onwash.length;i++){
 						if(lib.onwash[i]()=='remove'){
@@ -46707,6 +46809,9 @@
 			else if(str2.indexOf('TW')==0){
 				str2=str2.slice(2);
 			}
+			else if(str2.indexOf('OL')==0){
+				str2=str2.slice(2);
+			}
 			else if(str2.indexOf('JSP')==0){
 				str2=str2.slice(3);
 			}
@@ -46736,6 +46841,9 @@
 			else if(str2.indexOf('TW')==0){
 				str2=str2.slice(2);
 			}
+			else if(str2.indexOf('OL')==0){
+				str2=str2.slice(2);
+			}
 			else if(str2.indexOf('JSP')==0){
 				str2=str2.slice(3);
 			}
@@ -46754,6 +46862,9 @@
 				str2=str2.slice(2);
 			}
 			else if(str2.indexOf('TW')==0){
+				str2=str2.slice(2);
+			}
+			else if(str2.indexOf('OL')==0){
 				str2=str2.slice(2);
 			}
 			else if(str2.indexOf('JSP')==0){

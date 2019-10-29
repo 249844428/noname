@@ -162,7 +162,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					}
 					else{
 						var card=target.getCards('hej').randomGet();
-						player.gain(card,target,'giveAuto');
+						player.gain(card,target,'giveAuto','bySelf');
 					}
 				},
 				ai:{
@@ -274,7 +274,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					"step 1"
 					if(result.index==0){
 						var card=target.getCards('hej').randomGet();
-						player.gain(card,target,'giveAuto');
+						player.gain(card,target,'giveAuto','bySelf');
 						target.addTempSkill('tanbei_effect2','phaseAfter');
 					}
 					else{
@@ -1036,10 +1036,11 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				usable:1,
 				audio:2,
 				trigger:{
-					player:"useCard",
+					player:"useCardToPlayered",
 				},
 				direct:true,
 				filter:function (event,player){
+					if(event.getParent().triggeredTargets3.length>1) return false;
 					if(!player.isPhaseUsing()) return false;
 					if(!['basic','trick'].contains(get.type(event.card))) return false;
 					if(get.tag(event.card,'damage')) return true;
@@ -1050,7 +1051,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					player.chooseTarget(get.prompt2('xinfu_lingren'),function(card,player,target){
 						return trigger.targets.contains(target);
 					}).set('ai',function(target){
-						return -get.attitude(_status.event.player,target);
+						return 2-get.attitude(_status.event.player,target);
 					});
 					'step 1'
 					if(result.bool){
@@ -1261,7 +1262,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 							if(card1) list.push(card1);
 							if(card2) list.push(card2);
 							if(list.length>0){
-								player.gain(list,trigger.player,'giveAuto');
+								player.gain(list,trigger.player,'giveAuto','bySelf');
 							}
 							game.delay();
 						},
@@ -1966,7 +1967,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				content:function (){
 					"step 0"
 					trigger.source.chooseBool('【许身】：是否将自己的一张武将牌替换为“关索”？').set('ai',function(){
-						return true;
+						return false;
 					});
 					"step 1"
 					if(result.bool){
@@ -2253,11 +2254,10 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 			"xinfu_zhennan":{
 				audio:2,
 				trigger:{
-					global:"useCard",
+					target:"useCardToTargeted",
 				},
 				filter:function (event,player){
-					if(event.card.name!='nanman') return false;
-					return event.targets.contains(player);
+					return event.card.name=='nanman';
 				},
 				direct:true,
 				content:function (){
@@ -2861,11 +2861,12 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				},
 				audio:2,
 				trigger:{
-					player:"useCard",
+					player:"useCardToPlayered",
 				},
 				frequent:true,
 				filter:function (event,player){
 					if(player!=_status.currentPhase) return false;
+					if(event.getParent().triggeredTargets3.length>1) return false;
 					if(get.type(event.card)=='equip'&&get.subtype(event.card)!='equip1') return false;
 					if(event.targets.contains(player)) return true;
 					return false;
@@ -3618,12 +3619,12 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					switch(result.control){
 						case '递增':{
 							player.logSkill('xinfu_guanchao');
-							player.addTempSkill('xinfu_guanchao_dizeng');
+							player.addTempSkill('xinfu_guanchao_dizeng','phaseUseEnd');
 							break;
 						}
 						case '递减':{
 							player.logSkill('xinfu_guanchao');
-							player.addTempSkill('xinfu_guanchao_dijian');
+							player.addTempSkill('xinfu_guanchao_dijian','phaseUseEnd');
 							break;
 						}
 						case '取消':{
@@ -3778,11 +3779,12 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 			"xinfu_tushe":{
 				audio:2,
 				trigger:{
-					player:"useCard",
+					player:"useCardToPlayered",
 				},
 				frequent:true,
 				filter:function (event,player){
 					if(get.type(event.card)=='equip') return false;
+					if(event.getParent().triggeredTargets3>1) return false;
 					return event.targets.length>0&&!player.countCards('h',{type:'basic',});
 				},
 				content:function (){
@@ -5199,7 +5201,28 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					return false;
 				},
 				content:function (){
+					"step 0"
+					event.count=1;
+					if(trigger.name=='discard'){
+						event.count=0;
+						for(var i=0;i<trigger.cards.length;i++){
+							if(get.color(trigger.cards[i])=='red'&&trigger.cards[i].original!='j') event.count++;
+						}
+					}
+					"step 1"
 					player.draw();
+					event.count--;
+					"step 2"
+					if(event.count){
+						if(lib.config.autoskilllist.contains('mingzhe')) player.chooseBool(get.prompt2('mingzhe'));
+						else event._result={bool:true};
+					}
+					else event.finish();
+					"step 3"
+					if(result.bool){
+						player.logSkill('qc_mingzhe');
+						event.goto(1);
+					}
 				},
 				ai:{
 					threaten:0.7,

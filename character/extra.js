@@ -143,7 +143,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					event.range={
 						手牌区:['h','e','j'],
 						装备区:['e','h','j'],
-						判定区:['j','e','h'],
+						判定区:['j','h','e'],
 					}[result.control||'手牌区'];
 					"step 3"
 					if(num<event.targets.length){
@@ -153,7 +153,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 							var cards=target.getCards(range[i]);
 							if(cards.length){
 								var card=cards.randomGet();
-								player.gain(card,target,'giveAuto');
+								player.gain(card,target,'giveAuto','bySelf');
 								break;
 							}
 						}
@@ -1621,11 +1621,12 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 						autodelay:function(event){
 							return event.name=='respond'?0.5:false;
 						},
-						filter:function(evt){
+						filter:function(evt,player){
 							return (evt.skill=='xinlonghun3'||evt.skill=='xinlonghun4')&&
-								evt.cards&&evt.cards.length==2&&_status.currentPhase.countDiscardableCards('he');
+								evt.cards&&evt.cards.length==2&&_status.currentPhase&&_status.currentPhase!=player&&_status.currentPhase.countDiscardableCards(player,'he');
 						},
 						content:function(){
+							player.line(_status.currentPhase,'green');
 							player.discardPlayerCard(_status.currentPhase,'he',true);
 						}
 					}
@@ -2326,8 +2327,8 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				enable:'phaseUse',
 				usable:1,
 				filterTarget:function(card,player,target){
-					//return target!=player&&target.countCards('h')>0;
-					return target!=player;
+					return target!=player&&target.countCards('h')>0;
+					//return target!=player;
 				},
 				content:function(){
 					'step 0'
