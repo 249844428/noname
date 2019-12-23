@@ -649,11 +649,11 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 			},
 			xinleiji:{
 				group:'xinleiji_misa',
-				audio:'releiji',
+				audio:2,
 				audioname:['boss_qinglong'],
 				trigger:{player:['useCard','respond']},
 				filter:function(event,player){
-					return event.card.name=='shan'||event.card.name=='shandian';
+					return event.card.name=='shan'||event.name=='useCard'&&event.card.name=='shandian';
 				},
 				judgeCheck:function(card,bool){
 					var suit=get.suit(card);
@@ -701,24 +701,29 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				}
 			},
 			xinleiji_misa:{
-				audio:'releiji',
+				audio:'xinleiji',
 				trigger:{player:'judgeAfter'},
-				forced:true,
-				locked:false,
+				direct:true,
 				filter:function(event,player){
 					return event.judgestr!='暴虐'&&event.judgestr!='助祭'&&['spade','club'].contains(event.result.suit);
 				},
 				content:function(){
 					'step 0'
 					event.num=1+['club','spade'].indexOf(trigger.result.suit);
-					if(event.num==1) player.recover();
-					player.chooseTarget(true,'雷击：对一名角色造成'+event.num+'点雷电伤害。').ai=function(target){
+					event.logged=false;
+					if(event.num==1&&player.isDamaged()){
+						event.logged=true;
+						player.logSkill('xinleiji');
+						player.recover();
+					}
+					player.chooseTarget('雷击：是否对一名角色造成'+event.num+'点雷电伤害？',lib.filter.notMe).ai=function(target){
 						var player=_status.event.player;
 						return get.damageEffect(target,player,player,'thunder');
 					};
 					'step 1'
 					if(result.bool&&result.targets&&result.targets.length){
-						player.line(result.targets,'thunder');
+						if(!event.logged) player.logSkill('xinleiji',result.targets);
+						else player.line(result.targets,'thunder');
 						result.targets[0].damage(event.num,'thunder');
 					}
 				},
@@ -760,7 +765,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					}).set('judging',trigger.player.judging[0]);
 					"step 1"
 					if(result.bool){
-						player.respond(result.cards,'highlight','xinguidao');
+						player.respond(result.cards,'highlight','xinguidao','noOrdering');
 					}
 					else{
 						event.finish();
@@ -772,9 +777,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 						var card=result.cards[0];
 						if(get.suit(card)=='spade'&&card.number>1&&card.number<10) player.draw('nodelay');
 						trigger.player.judging[0]=result.cards[0];
-						if(!get.owner(result.cards[0],'judge')){
-							trigger.position.appendChild(result.cards[0]);
-						}
+						trigger.orderingCards.addArray(result.cards);
 						game.log(trigger.player,'的判定牌改为',result.cards[0]);
 					}
 					"step 3"
@@ -1157,7 +1160,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				},
 				filter:function (event,player){
 					if(event._notrigger.contains(event.player)) return false;
-					return event.card&&event.card.name=='sha'&&event.player.isAlive()&&event.player.countGainableCards(player,'hej')>0;
+					return event.card&&event.card.name=='sha'&&event.player!=player&&event.player.isAlive()&&event.player.countGainableCards(player,'hej')>0;
 				},
 				direct:true,
 				content:function (){
@@ -1343,7 +1346,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				},
 				content:function (){
 					"step 0"
-					if(get.itemtype(trigger.cards)=='cards'&&get.position(trigger.cards[0])=='d'){
+					if(get.itemtype(trigger.cards)=='cards'&&get.position(trigger.cards[0],true)=='o'){
 						player.gain(trigger.cards,"gain2");
 					}
 					player.draw('nodelay');
@@ -1809,7 +1812,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 			
 			reguanxing:{
 				audio:'guanxing',
-				audioname:['jiangwei'],
+				audioname:['jiangwei','re_jiangwei'],
 				trigger:{player:['phaseZhunbeiBegin','phaseJieshuBegin']},
 				frequent:true,
 				filter:function(event,player,name){
@@ -2026,7 +2029,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					player.judge(function(card){
 						if(get.color(card)=='black') return 1.5;
 						return -1.5;
-					},ui.special);
+					});
 					"step 1"
 					if(result.judge>0){
 						event.cards.push(result.card);
@@ -2039,7 +2042,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					}
 					else{
 						for(var i=0;i<event.cards.length;i++){
-							if(get.position(event.cards[i])!='s'){
+							if(get.position(event.cards[i])!='d'){
 								event.cards.splice(i,1);i--;
 							}
 						}
@@ -2601,7 +2604,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					}).set('judging',trigger.player.judging[0]);
 					"step 1"
 					if(result.bool){
-						player.respond(result.cards,'reguicai','highlight');
+						player.respond(result.cards,'reguicai','highlight','noOrdering');
 					}
 					else{
 						event.finish();
@@ -2619,9 +2622,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 						}
 						game.cardsDiscard(trigger.player.judging[0]);
 						trigger.player.judging[0]=result.cards[0];
-						if(!get.owner(result.cards[0],'judge')){
-							trigger.position.appendChild(result.cards[0]);
-						}
+						trigger.orderingCards.addArray(result.cards);
 						game.log(trigger.player,'的判定牌改为',result.cards[0]);
 						game.delay(2);
 					}
@@ -3141,7 +3142,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				audio:2,
 				trigger:{player:'damageEnd'},
 				filter:function(event,player){
-					return get.itemtype(event.cards)=='cards'&&get.position(event.cards[0])=='d';
+					return get.itemtype(event.cards)=='cards'&&get.position(event.cards[0],true)=='o';
 				},
 				content:function(){
 					player.gain(trigger.cards);
@@ -3165,7 +3166,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				direct:true,
 				content:function(){
 					"step 0"
-					if(get.itemtype(trigger.cards)=='cards'&&get.position(trigger.cards[0])=='d'){
+					if(get.itemtype(trigger.cards)=='cards'&&get.position(trigger.cards[0],true)=='o'){
 						player.chooseControl('rejianxiong_mopai','rejianxiong_napai','cancel2').set('prompt',get.prompt('rejianxiong')).ai=function(){
 							var trigger=_status.event.getTrigger();
 							if(trigger.cards.length==1&&trigger.cards[0].name=='sha') return 0;
@@ -3868,7 +3869,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 			
 			xinleiji:'雷击',
 			xinguidao:'鬼道',
-			xinleiji_info:'①当你使用或打出【闪】或【闪电】时，你可以进行判定。<br>②当你不因〖暴虐〗或〖助祭〗而进行的判定的判定牌生效后，若结果为：黑桃，你对一名角色造成2点雷电伤害；梅花：你回复1点体力并对一名其他角色造成1点雷电伤害。',
+			xinleiji_info:'①当你使用或打出【闪】或【闪电】时，你可以进行判定。<br>②当你不因〖暴虐〗或〖助祭〗而进行的判定的判定牌生效后，若结果为：黑桃，你可对一名其他角色造成2点雷电伤害；梅花：你回复1点体力并可对一名其他其他角色造成1点雷电伤害。',
 			xinguidao_info:'一名角色的判定牌生效前，你可以打出一张黑色牌作为判定牌并获得原判定牌。若你以此法打出的牌为黑桃2-9，则你摸一张牌。',
 			reqiangxi:"强袭",
 			"reqiangxi_info":"出牌阶段对每名其他角色限一次，你可以选择一项：1. 失去一点体力并对你攻击范围内的一名其他角色造成一点伤害；2. 弃置一张武器牌并对你攻击范围内的一名其他角色造成一点伤害。",
