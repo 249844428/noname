@@ -1484,7 +1484,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 								return get.attitude(player,target)<0?-999:-3;
 							}
 							else{
-								return target.countCards('h');
+								return target.countCards('h')+1;
 							}
 						},
 					},
@@ -5305,7 +5305,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					"step 1"
 					if(result.judge>0){
 						trigger.untrigger();
-						trigger.responded=true;
+						trigger.set('responded',true);
 						trigger.result={bool:true,card:{name:'shan'}}
 					}
 				},

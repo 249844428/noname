@@ -5,7 +5,11 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 		characterSort:{
 			refresh:{
     refresh_standard:["re_caocao","re_simayi","re_guojia","re_lidian","re_zhangliao","re_xuzhu","re_xiahoudun","re_zhangfei","re_zhaoyun","re_guanyu","re_machao","re_xushu","re_zhouyu","re_lvmeng","re_ganning","re_luxun","re_daqiao","re_huanggai","re_lvbu","re_gongsunzan","re_huatuo","re_liubei","re_diaochan","re_huangyueying","re_sunquan","re_sunshangxiang","re_zhenji","re_zhugeliang","re_huaxiong"],
-    refresh_ol:["re_zhangjiao","xin_yuji","re_zuoci"],
+    
+    refresh_feng:['caoren','re_xiahouyuan','re_huangzhong','re_weiyan','re_xiaoqiao','zhoutai','re_zhangjiao','xin_yuji'],
+				refresh_huo:["re_sp_zhugeliang","re_xunyu","re_dianwei","re_yanwen","re_pangtong","xin_yuanshao","re_pangde"],
+				refresh_lin:['re_zhurong','re_menghuo','re_dongzhuo','re_sunjian','re_caopi','re_xuhuang'],
+				refresh_shan:['re_dengai','re_jiangwei','re_caiwenji','re_sunben','re_liushan','re_zhangzhang','re_zuoci'],
    },
 		},
 		connect:true,
@@ -43,6 +47,32 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 			re_zhangjiao:['male','qun',3,['xinleiji','xinguidao','huangtian'],['zhu']],
 			xin_yuji:['male','qun',3,['reguhuo']],
 			re_zuoci:['male','qun',3,['rehuashen','rexinsheng']],
+			
+			re_xiahouyuan:['male','wei',4,['xinshensu']],
+			caoren:['male','wei',4,['xinjushou','xinjiewei']],
+			re_huangzhong:['male','shu',4,['xinliegong']],
+			re_weiyan:['male','shu',4,['xinkuanggu','qimou']],
+			re_xiaoqiao:['female','wu',3,['retianxiang','hongyan']],
+			zhoutai:['male','wu',4,['buqu','fenji']],
+			re_pangde:['male','qun',4,['mashu','jianchu']],
+			re_xuhuang:['male','wei',4,['duanliang','jiezi']],
+			re_sp_zhugeliang:["male","shu",3,["rehuoji","rekanpo","bazhen"],[]],
+			re_xunyu:["male","wei",3,["quhu","rejieming"],[]],
+			re_dianwei:["male","wei",4,["reqiangxi"],[]],
+			re_yanwen:["male","qun",4,["reshuangxiong"],[]],
+			re_pangtong:['male','shu',3,['xinlianhuan','niepan'],[]],
+			xin_yuanshao:['male','qun',4,['reluanji','xueyi'],['zhu']],
+			re_zhurong:['female','shu',4,['juxiang','relieren']],
+			re_menghuo:['male','shu',4,['huoshou','rezaiqi']],
+			re_dongzhuo:['male','qun',8,['rejiuchi','roulin','benghuai','baonue'],['zhu']],
+			re_sunjian:['male','wu',4,['gzyinghun','repolu']],
+			re_caopi:['male','wei',3,['rexingshang','refangzhu','songwei'],['zhu']],
+			re_dengai:['male','wei',4,['retuntian','zaoxian']],
+			re_jiangwei:['male','shu',4,['retiaoxin','zhiji']],
+			re_caiwenji:['female','qun',3,['rebeige','duanchang']],
+			re_liushan:['male','shu',3,['xiangle','refangquan','ruoyu'],['zhu']],
+			re_sunben:['male','wu',4,['jiang','rehunzi','zhiba'],['zhu']],
+			re_zhangzhang:['male','wu',3,['rezhijian','guzheng']],
 		},
 		characterIntro:{
 			re_gongsunzan:'群雄之一。出身贵族，因母地位卑贱，只当了郡中小吏。他貌美，声音洪亮，机智善辩。后随卢植于缑氏山中读书，粗通经传。',
@@ -53,10 +83,13 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				return mode=='identity'||mode=='single';
 			}
 		},
+		perfectPair:{
+			sunben:['zhouyu','taishici','daqiao'],
+		},
 		skill:{
 			rehuashen:{
 				mode:['identity','single'],
-				audio:'huashen1',
+				audio:2,
 				unique:true,
 				direct:true,
 				content:function(){
@@ -300,7 +333,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 			rexinsheng:{
 				mode:['identity','single'],
 				unique:true,
-				audio:'xinsheng',
+				audio:2,
 				trigger:{player:'damageEnd'},
 				frequent:true,
 				content:function(){
@@ -820,7 +853,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 						sub:true,
 					},
 				},
-				audio:"qiangxi",
+				audio:2,
 				enable:"phaseUse",
 				filterCard:function (card){
 					return get.subtype(card)=='equip1';
@@ -862,7 +895,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 			},
 			rehuoji:{
 				position:"he",
-				audio:"huoji",
+				audio:2,
 				enable:"chooseToUse",
 				filterCard:function (card){
 					return get.color(card)=='red';
@@ -934,7 +967,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				},
 			},
 			rekanpo:{
-				audio:"kanpo",
+				audio:2,
 				position:"he",
 				enable:"chooseToUse",
 				filterCard:function (card){
@@ -961,7 +994,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				},
 			},
 			rejieming:{
-				audio:"jieming",
+				audio:2,
 				trigger:{
 					player:"damageEnd",
 				},
@@ -1782,7 +1815,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					player:"damageBegin3",
 				},
 				//priority:1,
-				audio:"yaowu",
+				audio:2,
 				filter:function (event){
 					return event.card&&event.card.name=='sha';
 				},
@@ -4031,7 +4064,10 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 			rexinsheng:'新生',
 			rexinsheng_info:'当你受到1点伤害后，你可以获得一张新的化身牌。',
 			refresh_standard:'界限突破·标',
-			refresh_ol:'界限突破OL',
+			refresh_feng:'界限突破·风',
+			refresh_huo:'界限突破·火',
+			refresh_lin:'界限突破·林',
+			refresh_shan:'界限突破·山',
 		},
 	};
 });
