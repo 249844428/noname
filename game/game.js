@@ -126,16 +126,21 @@
 						name:'屏幕常亮',
 						init:false,
 						unfrequent:true,
-						intro:'防止屏幕自动关闭',
+						intro:'防止屏幕自动关闭<br>注：旧版本通过NoSleep.js实现的屏幕常亮可能会影响外置音频的音量',
 						onclick:function(bool){
 							game.saveConfig('keep_awake',bool);
-							if(window.plugins&&window.plugins.insomnia){
-								if(bool){
-									window.plugins.insomnia.keepAwake();
+							if(bool){
+								if(window.plugins&&window.plugins.insomnia) window.plugins.insomnia.keepAwake();
+								else if(window.noSleep){
+									document.addEventListener(lib.config.touchscreen?'touchend':'click', function enableNoSleepX() {
+										document.removeEventListener(lib.config.touchscreen?'touchend':'click', enableNoSleepX, false);
+										window.noSleep.enable();
+									}, false);
 								}
-								else{
-									window.plugins.insomnia.allowSleepAgain();
-								}
+							}
+							else{
+								if(window.plugins&&window.plugins.insomnia) window.plugins.insomnia.allowSleepAgain();
+								else if(window.noSleep) window.noSleep.disable();
 							}
 						}
 					},
@@ -3226,6 +3231,20 @@
 							}
 						}
 					},
+					show_sortcard:{
+						name:'显示整理手牌按钮',
+						init:true,
+						unfrequent:true,
+						onclick:function(bool){
+							game.saveConfig('show_sortcard',bool);
+							if(lib.config.show_sortcard){
+								ui.sortCard.style.display='';
+							}
+							else{
+								ui.sortCard.style.display='none';
+							}
+						}
+					},
 					show_pause:{
 						name:'显示暂停按钮',
 						init:true,
@@ -4556,6 +4575,8 @@
 						name:'鏖战模式',
 						init:true,
 						intro:'若开启此选项，则将在游戏中引入“鏖战模式”的规则：<br>当游戏中仅剩四名或更少角色时（七人以下游戏时改为三名或更少），若此时全场没有超过一名势力相同的角色，则从一个新的回合开始，游戏进入鏖战模式直至游戏结束。<br>◇在鏖战模式下，【桃】只能当做【杀】或【闪】使用或打出，不能用来回复体力。<br>注：进入鏖战模式后，即使之后有两名或者更多势力相同的角色出现，仍然不会取消鏖战模式。',
+						frequent:true,
+						restart:true,
 					},
 					connect_viewnext:{
 						name:'观看下家副将',
@@ -4645,6 +4666,8 @@
 					aozhan:{
 						name:'鏖战模式',
 						init:true,
+						frequent:true,
+						restart:true,
 						intro:'若开启此选项，则将在游戏中引入“鏖战模式”的规则：<br>当游戏中仅剩四名或更少角色时（七人以下游戏时改为三名或更少），若此时全场没有超过一名势力相同的角色，则从一个新的回合开始，游戏进入鏖战模式直至游戏结束。<br>◇在鏖战模式下，【桃】只能当做【杀】或【闪】使用或打出，不能用来回复体力。<br>注：进入鏖战模式后，即使之后有两名或者更多势力相同的角色出现，仍然不会取消鏖战模式。',
 					},
 					viewnext:{
@@ -4675,6 +4698,16 @@
 					guozhanpile:{
 						name:'使用国战牌堆',
 						init:true,
+						frequent:true,
+						restart:true,
+					},
+					changeViceType:{
+						name:'副将变更方式',
+						init:'default',
+						item:{
+							default:'发现式',
+							online:'随机式',
+						},
 						frequent:true,
 						restart:true,
 					},
@@ -5985,7 +6018,8 @@
 			'<li>角色资料<br>lib.character<li>卡牌资料<br>lib.card</ul>',
 			'游戏名词':'<ul><li>护甲：和体力类似，每点护甲可抵挡一点伤害，但不影响手牌上限'+
 			'<li>随从：通过技能获得，拥有独立的技能、手牌区和装备区（共享判定区），出场时替代主武将的位置；随从死亡时自动切换回主武将'+
-			'<li>发现：从三张随机亮出的牌中选择一张，若无特殊说明，则获得此牌'
+			'<li>发现：从三张随机亮出的牌中选择一张，若无特殊说明，则获得此牌'+
+			'<li>蓄力技：发动时可以增大黄色的数字。若如此做，红色数字于技能的结算过程中改为原来的两倍'
 		},
 		setIntro:function(node,func,left){
 			if(lib.config.touchscreen){
@@ -9472,6 +9506,8 @@
 			'default':"默认",
 			special:'特殊',
 			zhenfa:'阵法',
+			aozhan:"鏖战",
+			"aozhan_info":"",
 			mode_derivation_card_config:'衍生',
 			mode_banned_card_config:'禁卡',
 			mode_favourite_character_config:'收藏',
@@ -9667,6 +9703,8 @@
 						if(event.nopopup) next.nopopup=true;
 						if(event.animate===false) next.animate=false;
 						if(event.addCount===false) next.addCount=false;
+						if(event.noTargetDelay) next.targetDelay=false;
+						if(event.nodelayx) next.delayx=false;
 					}
 				},
 				chooseToDuiben:function(){
@@ -10046,7 +10084,10 @@
 						}
 					}
 					player.ai.tempIgnore=[];
-					player.stat.push({card:{},skill:{}});
+					game.countPlayer2(function(current){
+						current.actionHistory.push({useCard:[],respond:[],skipped:[],lose:[],gain:[],sourceDamage:[],damage:[]});
+						current.stat.push({card:{},skill:{}});
+					});
 					if(ui.land&&ui.land.player==player){
 						game.addVideo('destroyLand');
 						ui.land.destroy();
@@ -10287,6 +10328,10 @@
 						return;
 					}
 					_status.imchoosing=true;
+					event.switchToAuto=function(){
+						_status.event.bool=false;
+						game.resume();
+					}
 					game.pause();
 					"step 3"
 					_status.imchoosing=false;
@@ -10303,8 +10348,8 @@
 						event.goto(2);
 					}
 					else{
-						event.dialog.close();
-						ui.confirm.close();
+						if(event.dialog) event.dialog.close();
+						if(ui.confirm) ui.confirm.close();
 						event.finish();
 					}
 				},
@@ -10461,11 +10506,18 @@
 					}
 					'step 2'
 					if(!event.map.length){
-						if(trigger._triggering==this){
-							delete trigger._triggering;
+						if(event.list2.length){
+							var info=event.list2.shift();
+							game.createTrigger(event.triggername,info[0],info[1],trigger);
+							event.redo();
 						}
-						event.finish();
-						return;
+						else{
+							if(trigger._triggering==this){
+								delete trigger._triggering;
+							}
+							event.finish();
+							return;
+						}
 					};
 					event.doing=event.map.shift();
 					'step 3'
@@ -10575,9 +10627,6 @@
 							event._result={bool:true};
 							event._direct=true;
 						}
-						else if(checkFrequent(info)&&!lib.config.autoskilllist.contains(event.skill)){
-							event._result={bool:true};
-						}
 						else if(info.direct){
 							event._result={bool:true};
 							event._direct=true;
@@ -10587,6 +10636,9 @@
 							event._direct=true;
 						}
 						else{
+							if(checkFrequent(info)){
+								event.frequentSkill=true;
+							}
 							var str;
 							var check=info.check;
 							if(info.prompt) str=info.prompt;
@@ -10603,6 +10655,7 @@
 							}
 							if(typeof str=='function'){str=str(trigger,player)}
 							var next=player.chooseBool(str);
+							if(event.frequentSkill) next.set('frequentSkill',event.skill);
 							next.set('forceDie',true);
 							next.ai=function(){
 								return !check||check(trigger,player);
@@ -11028,13 +11081,14 @@
 				},
 				phaseDraw:function(){
 					"step 0"
+					event.trigger("phaseDrawBegin1");
+					"step 1"
+					event.trigger("phaseDrawBegin2");
+					"step 2"
 					if(game.modPhaseDraw){
 						game.modPhaseDraw(player,event.num);
 					}
 					else{
-						if((get.config('first_less')||_status.connectMode||_status.first_less_forced)&&game.phaseNumber==1&&_status.first_less){
-							event.num--;
-						}
 						if(event.num>0){
 							var num=event.num;
 							if(event.attachDraw){
@@ -11049,7 +11103,7 @@
 							}
 						}
 					}
-					"step 1"
+					"step 3"
 					if(Array.isArray(result)){
 						event.cards=result;
 					}
@@ -12476,6 +12530,10 @@
 				chooseBool:function(){
 					"step 0"
 					if(event.isMine()){
+						if(event.frequentSkill&&!lib.config.autoskilllist.contains(event.frequentSkill)){
+							ui.click.ok();
+							return;
+						}
 						ui.create.confirm('oc');
 						if(event.createDialog&&!event.dialog){
 							if(Array.isArray(event.createDialog)){
@@ -13319,6 +13377,32 @@
 					event.directHit=[];
 					event.customArgs={default:{}};
 					event.baseDamage=get.info(card,false).baseDamage||1;
+					player.actionHistory[player.actionHistory.length-1].useCard.push(event);
+					if(event.addCount!=false){
+						if(player.stat[player.stat.length-1].card[card.name]==undefined){
+							player.stat[player.stat.length-1].card[card.name]=1;
+						}
+						else{
+							player.stat[player.stat.length-1].card[card.name]++;
+						}
+						if(event.skill){
+							if(player.stat[player.stat.length-1].skill[event.skill]==undefined){
+								player.stat[player.stat.length-1].skill[event.skill]=1;
+							}
+							else{
+								player.stat[player.stat.length-1].skill[event.skill]++;
+							}
+							var sourceSkill=get.info(event.skill).sourceSkill;
+							if(sourceSkill){
+								if(player.stat[player.stat.length-1].skill[sourceSkill]==undefined){
+									player.stat[player.stat.length-1].skill[sourceSkill]=1;
+								}
+								else{
+									player.stat[player.stat.length-1].skill[sourceSkill]++;
+								}
+							}
+						}
+					}
 					event.trigger('useCard1');
 					"step 1"
 					event.trigger('useCard2');
@@ -13365,31 +13449,6 @@
 							game.logv(player,[card,cards],targets);
 						}
 					}
-					if(event.addCount!=false){
-						if(player.stat[player.stat.length-1].card[card.name]==undefined){
-							player.stat[player.stat.length-1].card[card.name]=1;
-						}
-						else{
-							player.stat[player.stat.length-1].card[card.name]++;
-						}
-						if(event.skill){
-							if(player.stat[player.stat.length-1].skill[event.skill]==undefined){
-								player.stat[player.stat.length-1].skill[event.skill]=1;
-							}
-							else{
-								player.stat[player.stat.length-1].skill[event.skill]++;
-							}
-							var sourceSkill=get.info(event.skill).sourceSkill;
-							if(sourceSkill){
-								if(player.stat[player.stat.length-1].skill[sourceSkill]==undefined){
-									player.stat[player.stat.length-1].skill[sourceSkill]=1;
-								}
-								else{
-									player.stat[player.stat.length-1].skill[sourceSkill]++;
-								}
-							}
-						}
-					}
 					"step 3"
 					event.sortTarget=function(animate){
 						var info=get.info(card,false);
@@ -13429,6 +13488,9 @@
 						next.card=card;
 						next.cards=cards;
 						next.player=player;
+						next.excluded=event.excluded;
+						next.directHit=event.directHit;
+						next.customArgs=event.customArgs;
 						if(event.forceDie) next.forceDie=true;
 						event.redo();
 					}
@@ -13444,6 +13506,9 @@
 						next.card=card;
 						next.cards=cards;
 						next.player=player;
+						next.excluded=event.excluded;
+						next.directHit=event.directHit;
+						next.customArgs=event.customArgs;
 						if(event.forceDie) next.forceDie=true;
 						event.redo();
 					}
@@ -13459,6 +13524,9 @@
 						next.card=card;
 						next.cards=cards;
 						next.player=player;
+						next.excluded=event.excluded;
+						next.directHit=event.directHit;
+						next.customArgs=event.customArgs;
 						if(event.forceDie) next.forceDie=true;
 						event.redo();
 					}
@@ -13474,6 +13542,9 @@
 						next.card=card;
 						next.cards=cards;
 						next.player=player;
+						next.excluded=event.excluded;
+						next.directHit=event.directHit;
+						next.customArgs=event.customArgs;
 						if(event.forceDie) next.forceDie=true;
 						event.redo();
 					}
@@ -13983,6 +14054,7 @@
 					else{
 						game.log(player,'打出了',card);
 					}
+					player.actionHistory[player.actionHistory.length-1].respond.push(event);
 					var cards2=cards.slice(0);
 					if(cards2.length){
 						var next=player.lose(cards2,ui.ordering,'visible');
@@ -14118,6 +14190,7 @@
 						event.finish();
 						return;
 					}
+					player.getHistory('gain').push(event);
 					//if(event.source&&event.delay!==false) game.delayx();
 					"step 2"
 					if(player.getStat().gain==undefined){
@@ -14308,6 +14381,8 @@
 						_status.cardPileNum=num;
 					},player,cards,ui.cardPile.childNodes.length);
 					game.addVideo('lose',player,[get.cardsInfo(hs),get.cardsInfo(es),get.cardsInfo(js)]);
+					event.cards2=hs.concat(es);
+					player.getHistory('lose').push(event);
 					player.update();
 					game.addVideo('loseAfter',player);
 					event.num=0;
@@ -14433,6 +14508,7 @@
 						player.stat[player.stat.length-1].damaged+=num;
 					}
 					if(source){
+						source.getHistory('sourceDamage').push(event);
 						if(source.stat[source.stat.length-1].damage==undefined){
 							source.stat[source.stat.length-1].damage=num;
 						}
@@ -14440,6 +14516,7 @@
 							source.stat[source.stat.length-1].damage+=num;
 						}
 					}
+					player.getHistory('damage').push(event);
 					if(event.notrigger){
 						player.changeHp(-num,false)._triggered=null;
 					}
@@ -15639,7 +15716,10 @@
 					this.node.hp.innerHTML='';
 					this.node.count.innerHTML='0';
 					if(this.name2){
+						delete this.singleHp;
 						this.node.avatar2.hide();
+						this.node.name2.innerHTML='';
+						this.classList.remove('fullskin2')
 						delete this.name2;
 						this.node.count.classList.remove('p2');
 					}
@@ -16063,6 +16143,44 @@
 					this.updateMarks();
 					return this;
 				},
+				removeMark:function(i,num,log){
+					if(typeof num!='number'||!num) num=1;
+					if(typeof this.storage[i]!='number'||!this.storage[i]) return;
+					if(num>this.storage[i]) num=this.storage[i];
+					this.storage[i]-=num;
+					if(log!==false){
+						var str=false;
+						var info=get.info(i);
+						if(info&&info.intro&&(info.intro.name||info.intro.name2)) str=info.intro.name2||info.intro.name;
+						else str=lib.translate[i];
+						if(str) game.log(this,'移去了',get.cnNumber(num),'个','#g【'+str+'】');
+					}
+					this.syncStorage(i);
+					this[this.storage[i]?'updateMark':'unmarkSkill'](i);
+				},
+				addMark:function(i,num,log){
+					if(typeof num!='number'||!num) num=1;
+					if(typeof this.storage[i]!='number') this.storage[i]=0;
+					this.storage[i]+=num;
+					if(log!==false){
+						var str=false;
+						var info=get.info(i);
+						if(info&&info.intro&&(info.intro.name||info.intro.name2)) str=info.intro.name2||info.intro.name;
+						else str=lib.translate[i];
+						if(str) game.log(this,'获得了',get.cnNumber(num),'个','#g【'+str+'】');
+					}
+					this.syncStorage(i);
+					this.updateMark(i);
+				},
+				countMark:function(i){
+					if(this.storage[i]==undefined) return 0;
+					if(typeof this.storage[i]=='number') return this.storage[i];
+					if(Array.isArray(this.storage[i])) return this.storage[i].length;
+					return 0;
+				},
+				hasMark:function(i){
+					return this.countMark(i)>0;
+				},
 				updateMark:function(i,storage){
 					if(!this.marks[i]){
 						if(lib.skill[i]&&lib.skill[i].intro&&(this.storage[i]||lib.skill[i].intro.markcount)){
@@ -16195,7 +16313,17 @@
 					}
 					return null;
 				},
-				countUsed:function(card){
+				countUsed:function(card,type){
+					if(type===true){
+						var num=0;
+						var history=this.getHistory('useCard');
+						for(var i=0;i<history.length;i++){
+							if(!card) num++;
+							else if(typeof card=='string'&&history[i].card&&card==history[i].card.name) num++;
+							else if(typeof card=='object'&&history[i].card&&card.name==history[i].card.name) num++;
+						}
+						return num;
+					}
 					var num;
 					var stat=this.getStat('card');
 					if(!card){
@@ -16733,6 +16861,9 @@
 					var next=game.createEvent('phaseDraw');
 					next.player=this;
 					next.num=2;
+					if((get.config('first_less')||_status.connectMode||_status.first_less_forced)&&game.phaseNumber==1&&_status.first_less){
+						next.num--;
+					}
 					next.setContent('phaseDraw');
 					return next;
 				},
@@ -17171,6 +17302,12 @@
 							}
 							else if(arguments[i]=='nodistance'){
 								next.nodistance=true;
+							}
+							else if(arguments[i]=='noTargetDelay'){
+								next.noTargetDelay=true;
+							}
+							else if(arguments[i]=='nodelayx'){
+								next.nodelayx=true;
 							}
 							else if(lib.card[arguments[i]]&&!next.card){
 								next.card={name:arguments[i]};
@@ -17988,7 +18125,7 @@
 						game.addVideo('directequip',this,get.cardsInfo(cards));
 					}
 				},
-				directgain:function(cards){
+				directgain:function(cards,broadcast){
 					var hs=this.getCards('h');
 					for(var i=0;i<cards.length;i++){
 						if(hs.contains(cards[i])){
@@ -18013,7 +18150,7 @@
 						game.addVideo('directgain',this,get.cardsInfo(cards));
 						this.update();
 					}
-					game.broadcast(function(player,cards){
+					if(broadcast!==false) game.broadcast(function(player,cards){
 						player.directgain(cards);
 					},this,cards);
 					return this;
@@ -19773,6 +19910,23 @@
 							}
 						}
 					}
+				},
+				getHistory:function(key,filter){
+					if(!key) return this.actionHistory[this.actionHistory.length-1];
+					if(!filter) return this.actionHistory[this.actionHistory.length-1][key];
+					else{
+						var history=this.getHistory(key).slice(0);
+						for(var i=0;i<history.length;i++){
+							if(!filter(history[i])) history.splice(i--,1);
+						}
+						return history;
+					}
+				},
+				getLastUsed:function(num){
+					if(typeof num!='number') num=0;
+					var history=this.getHistory('useCard');
+					if(history.length<=num) return null;
+					return history[history.length-num-1];
 				},
 				getStat:function(key){
 					if(!key) return this.stat[this.stat.length-1];
@@ -22444,10 +22598,12 @@
 				finish:function(){
 					this.finished=true;
 				},
-				cancel:function(){
+				cancel:function(arg1,arg2,notrigger){
 					this.untrigger.call(this,arguments);
 					this.finish();
-					this.trigger(this.name+'Cancelled');
+					if(notrigger!='notrigger'){
+						this.trigger(this.name+'Cancelled');
+						if(this.player&&lib.phaseName.contains(this.name)) this.player.getHistory('skipped').add(this.name)}
 				},
 				goto:function(step){
 					this.step=step-1;
@@ -22603,12 +22759,19 @@
 							if(info.filterTarget!=undefined) this.filterTarget=get.filter(info.filterTarget);
 							if(info.selectTarget!=undefined) this.selectTarget=info.selectTarget;
 							if(info.filterCard!=undefined){
+								if(info.ignoreMod) this.ignoreMod=true;
+								this.filterCard2=get.filter(info.filterCard);
 								this.filterCard=function(card,player,event){
-									if(!info.ignoreMod&&player){
+									var evt=event||_status.event;
+									if(!evt.ignoreMod&&player){
 										var mod=game.checkMod(card,player,'unchanged','cardEnabled2',player);
 										if(mod!='unchanged') return mod;
+										if(evt._backup&&evt._backup.filterCard){
+											var cardx=get.autoViewAs(lib.skill[evt.skill].viewAs,ui.selected.cards.concat([card]));
+											if(!get.filter(evt._backup.filterCard)(cardx,player,evt)) return false;
+										};
 									}
-									return get.filter(info.filterCard)(card,player,event);
+									return get.filter(evt.filterCard2).apply(this,arguments);
 								};
 							}
 							if(info.selectCard!=undefined) this.selectCard=info.selectCard;
@@ -22663,6 +22826,8 @@
 						this._skillChoice=this._backup._skillChoice;
 					}
 					delete this.skill;
+					delete this.ignoreMod;
+					delete this.filterCard2;
 				},
 				isMine:function(){
 					return (this.player&&this.player==game.me&&!_status.auto&&!this.player.isMad());
@@ -22672,6 +22837,11 @@
 				},
 				notLink:function(){
 					return this.getParent().name!='_lianhuan'&&this.getParent().name!='_lianhuan2';
+				},
+				isPhaseUsing:function(player){
+					var evt=this.getParent('phaseUse');
+					if(!evt||evt.name!='phaseUse') return false;
+					return !player||player==evt.player;
 				},
 				addTrigger:function(skill,player){
 					if(!player) return;
@@ -22731,6 +22901,8 @@
 				},
 				trigger:function(name){
 					if(_status.video) return;
+					if((this.name==='gain'||this.name==='lose')&&!_status.gameDrawed) return;
+					if(name==='gameDrawEnd') _status.gameDrawed=true;
 					if(name==='gameStart'){
 						if(_status.brawl&&_status.brawl.gameStart){
 							_status.brawl.gameStart();
@@ -22756,6 +22928,7 @@
 						start=game.findNext(start);
 					}
 					var list=[];
+					var list2=[];
 					var mapx=[];
 					var allbool=false;
 					var roles=['player','source','target'];
@@ -22779,6 +22952,14 @@
 						if(info.firstDo){
 							list.push([skill,player,num]);
 							list.sort(function(a,b){
+								return b[2]-a[2];
+							});
+							allbool=true;
+							return;
+						}
+						else if(info.lastDo){
+							list2.push([skill,player,num]);
+							list2.sort(function(a,b){
 								return b[2]-a[2];
 							});
 							allbool=true;
@@ -22902,6 +23083,7 @@
 						var next=game.createEvent('arrangeTrigger',false,event);
 						next.setContent('arrangeTrigger');
 						next.list=list;
+						next.list2=list2;
 						next.map=mapx;
 						next._trigger=event;
 						next.triggername=name;
@@ -23455,9 +23637,26 @@
 				return (_status.event._aiexclude.contains(card)==false);
 			},
 			filterCard:function(card,player,event){
-				if(get.info(card).toself&&!lib.filter.targetEnabled(card,player,player)) return false;
-				return (lib.filter.cardEnabled(card,player,event)&&
-					lib.filter.cardUsable(card,player,event));
+				var info=get.info(card);
+				//if(info.toself&&!lib.filter.targetEnabled(card,player,player)) return false;
+				if(player==undefined) player=_status.event.player;
+				if(!lib.filter.cardEnabled(card,player,event)||!lib.filter.cardUsable(card,player,event)) return false;
+				if(info.notarget) return true;
+				var range;
+				var select=get.copy(info.selectTarget);
+				if(select==undefined){
+					if(info.filterTarget==undefined) return true;
+					range=[1,1];
+				}
+				else if(typeof select=='number') range=[select,select];
+				else if(get.itemtype(select)=='select') range=select;
+				else if(typeof select=='function') range=select(card,player);
+				game.checkMod(card,player,range,'selectTarget',player);
+				if(!range||range[1]!=-1) return true;
+				var filterTarget=(event&&event.filterTarget)?event.filterTarget:lib.filter.filterTarget;
+				return game.hasPlayer(function(current){
+					return filterTarget(card,player,current);
+				});
 			},
 			targetEnabled:function(card,player,target){
 				if(!card) return false;
@@ -23701,6 +23900,75 @@
 			}
 		},
 		skill:{
+			aozhan:{
+				charlotte:true,
+				mod:{
+					targetEnabled:function(card){
+						if(card.name=='tao'&&get.itemtype(card)=='card') return false;
+					},
+					cardSavable:function(card){
+						if(card.name=='tao'&&get.itemtype(card)=='card') return false;
+					},
+				},
+				group:["aozhan_sha","aozhan_shan"],
+				subSkill:{
+					sha:{
+						enable:["chooseToUse","chooseToRespond"],
+						filterCard:{
+							name:"tao",
+						},
+						viewAs:{
+							name:"sha",
+						},
+						viewAsFilter:function (player){
+							if(!player.countCards('h','tao')) return false;
+						},
+						prompt:"将一张桃当杀使用或打出",
+						check:function (){return 1},
+						ai:{
+							effect:{
+								target:function (card,player,target,current){
+									if(get.tag(card,'respondSha')&&current<0) return 0.6
+								},
+							},
+							respondSha:true,
+							skillTagFilter:function (player){
+								if(!player.countCards('h','tao')) return false;
+							},
+							order:function (){
+								return get.order({name:'sha'})-0.1;
+							},
+						},
+						sub:true,
+					},
+					shan:{
+						enable:["chooseToRespond","chooseToUse"],
+						filterCard:{
+							name:"tao",
+						},
+						viewAs:{
+							name:"shan",
+						},
+						prompt:"将一张桃当闪打出",
+						check:function (){return 1},
+						viewAsFilter:function (player){
+							if(!player.countCards('h','tao')) return false;
+						},
+						ai:{
+							respondShan:true,
+							skillTagFilter:function (player){
+								if(!player.countCards('h','tao')) return false;
+							},
+							effect:{
+								target:function (card,player,target,current){
+									if(get.tag(card,'respondShan')&&current<0) return 0.6
+								},
+							},
+						},
+						sub:true,
+					},
+				},
+			},
 			global:[],
 			globalmap:{},
 			storage:{},
@@ -23739,6 +24007,7 @@
 				}
 			},
 			autoswap:{
+				firstDo:true,
 				trigger:{player:['playercontrol','chooseToUseBegin','chooseToRespondBegin','chooseToDiscardBegin','chooseToCompareBegin',
 				'chooseButtonBegin','chooseCardBegin','chooseTargetBegin','chooseCardTargetBegin','chooseControlBegin',
 				'chooseBoolBegin','choosePlayerCardBegin','discardPlayerCardBegin','gainPlayerCardBegin']},
@@ -23876,7 +24145,7 @@
 				init:function(player,skill){
 					var skills=player.getSkills(true,false);
 					for(var i=0;i<skills.length;i++){
-						if(get.is.locked(skills[i])){
+						if(get.is.locked(skills[i])||lib.skill[skills[i]].charlotte){
 							skills.splice(i--,1);
 						}
 					}
@@ -23908,40 +24177,40 @@
 				}
 			},
 			baiban:{
-                init:function (player,skill){
-        var skills=player.getSkills(true,false);
-        for(var i=0;i<skills.length;i++){
-           if(get.skills[i]){
-                skills.splice(i--,1);                                 
-           } 
-        }
-        player.disableSkill(skill,skills);
-    },
-                onremove:function (player,skill){
-        player.enableSkill(skill);
-    },
-                mark:true,
-                locked:true,
-                intro:{
-                    content:function (storage,player,skill){
-            var list=[];
-            for(var i in player.disabledSkills){
-                if(player.disabledSkills[i].contains(skill)){
-                    list.push(i)
-                }
-            }
-            if(list.length){
-                var str='失效技能：';
-                for(var i=0;i<list.length;i++){
-                    if(lib.translate[list[i]+'_info']){
-                        str+=get.translation(list[i])+'、';
-                    }
-                }
-                return str.slice(0,str.length-1);
-            }
-        },
-                },
-            },
+				init:function (player,skill){
+					var skills=player.getSkills(true,false);
+					for(var i=0;i<skills.length;i++){
+						if(get.skills[i]||lib.skill[skills[i]].charlotte){
+							skills.splice(i--,1);
+						}
+					}
+					player.disableSkill(skill,skills);
+				},
+				onremove:function (player,skill){
+					player.enableSkill(skill);
+				},
+				mark:true,
+				locked:true,
+				intro:{
+					content:function (storage,player,skill){
+						var list=[];
+						for(var i in player.disabledSkills){
+							if(player.disabledSkills[i].contains(skill)){
+								list.push(i)
+							}
+						}
+						if(list.length){
+							var str='失效技能：';
+							for(var i=0;i<list.length;i++){
+								if(lib.translate[list[i]+'_info']){
+									str+=get.translation(list[i])+'、';
+								}
+							}
+							return str.slice(0,str.length-1);
+						}
+					},
+				},
+			},
 			qianxing:{
 				mark:true,
 				nopop:true,
@@ -24002,6 +24271,7 @@
 			counttrigger:{
 				trigger:{global:'phaseAfter'},
 				silent:true,
+				charlotte:true,
 				priority:-100,
 				content:function(){
 					player.removeSkill('counttrigger');
@@ -24012,6 +24282,7 @@
 				trigger:{player:'recoverBefore'},
 				forced:true,
 				priority:100,
+				firstDo:true,
 				popup:false,
 				filter:function(event,player){
 					return player.hp>=player.maxHp;
@@ -24025,6 +24296,7 @@
 				forced:true,
 				priority:100,
 				popup:false,
+				firstDo:true,
 				content:function(){
 					// for(var i=0;i<game.players.length;i++){
 					// 	game.players[i].in();
@@ -24058,6 +24330,7 @@
 				forced:true,
 				popup:false,
 				priority:-100,
+				lastDo:true,
 				filter:function(event){
 					return !event._cleared&&event.card.name!='wuxie';
 				},
@@ -24073,6 +24346,7 @@
 				forced:true,
 				popup:false,
 				priority:-100,
+				lastDo:true,
 				filter:function(event){
 					return ui.todiscard[event.discardid]?true:false;
 				},
@@ -24118,7 +24392,7 @@
 						return;
 					}
 					event.acted.push(player);
-					var str=get.translation(trigger.player.name)+'濒死，是否帮助？';
+					var str=get.translation(trigger.player)+'濒死，是否帮助？';
 					var str2='当前体力：'+trigger.player.hp;
 					if(lib.config.tao_enemy&&event.dying.side!=player.side&&lib.config.mode!='identity'&&lib.config.mode!='guozhan'&&!event.dying.hasSkillTag('revertsave')){
 						event._result={bool:false}
@@ -25309,6 +25583,7 @@
 			western:'thunder',
 			key:'key',
 		},
+		phaseName:['phaseZhunbei','phaseJudge','phaseDraw','phaseUse','phaseDiscard','phaseJieshu'],
 	};
 	var game={
 		cardsDiscard:function(cards){
@@ -25679,7 +25954,13 @@
 			if(_status.connectMode&&!_status.countDown){
 				ui.timer.show();
 				var num;
-				if(_status.connectMode){
+				//这么一大行都是为了祢衡
+				if(_status.event&&_status.event.name=='chooseToUse'&&_status.event.type=='phase'&&
+					_status.event.player&&_status.event.player.forceCountChoose&&
+					typeof _status.event.player.forceCountChoose.phaseUse=='number'){
+					num=_status.event.player.forceCountChoose.phaseUse;
+				}
+				else if(_status.connectMode){
 					num=lib.configOL.choose_timeout;
 				}
 				else{
@@ -25704,12 +25985,16 @@
 			else if(_status.event.player.forceCountChoose&&_status.event.isMine()&&!_status.countDown){
 				var info=_status.event.player.forceCountChoose;
 				var num;
-				if(typeof info[_status.event.name]=='number'){
+				if(_status.event.name=='chooseToUse'&&_status.event.type=='phase'&&typeof info.phaseUse=='number'){
+					num=info.phaseUse;
+				}
+				else if(typeof info[_status.event.name]=='number'){
 					num=info[_status.event.name]
 				}
-				else{
+				else if(info.default){
 					num=info.default;
 				}
+				else return;
 				var finish=function(){
 					if(_status.event.endButton){
 						if(_status.event.skill){
@@ -25905,6 +26190,10 @@
 				(!lib.skill.global.contains(skill)||lib.skill[skill].forceaudio)){
 				var audioname=skill;
 				var audioinfo=info.audio;
+				if(typeof audioinfo=='string'&&lib.skill[audioinfo]){
+					audioname=audioinfo;
+					audioinfo=lib.skill[audioname].audio;
+				}
 				if(typeof audioinfo=='string'){
 					if(audioinfo.indexOf('ext:')==0){
 						audioinfo=audioinfo.split(':');
@@ -25920,12 +26209,6 @@
 							}
 						}
 						return;
-					}
-					else{
-						audioname=audioinfo;
-						if(lib.skill[audioinfo]){
-							audioinfo=lib.skill[audioinfo].audio;
-						}
 					}
 				}
 				else if(Array.isArray(audioinfo)){
@@ -26005,7 +26288,7 @@
 			if(lib.config.background_music=='music_off'){
 				ui.backgroundMusic.src='';
 			}
-			else if(get.mode()=='guozhan'&&_status._aozhan==true&&lib.config.mode_config.guozhan.aozhan_bgm!='disabled'){
+			else if(_status._aozhan==true&&lib.config.mode_config.guozhan.aozhan_bgm!='disabled'){
 				var aozhan=lib.config.mode_config.guozhan.aozhan_bgm;
 				ui.backgroundMusic.src=lib.assetURL+'audio/background/aozhan_'+aozhan+'.mp3';
 			}
@@ -26521,6 +26804,23 @@
 			game.loop();
 		},
 		videoContent:{
+			jiuNode:function(player,bool){
+				//Powered by 升麻
+				if(bool){
+					if(!player.node.jiu&&lib.config.jiu_effect){
+						player.node.jiu=ui.create.div('.playerjiu',player.node.avatar);
+						player.node.jiu2=ui.create.div('.playerjiu',player.node.avatar2);
+					}
+				}
+				else{
+					if(player.node.jiu){
+						player.node.jiu.delete();
+						player.node.jiu2.delete();
+						delete player.node.jiu;
+						delete player.node.jiu2;
+					}
+				}
+			},
 			init:function(players){
 				if(game.chess) return;
 				if(lib.config.mode=='versus'){
@@ -29486,6 +29786,7 @@
 				if(next.player&&next.player.skipList.contains(next.name)){
 					event.trigger(next.name+'Skipped');
 					next.player.skipList.remove(next.name);
+					if(lib.phaseName.contains(next.name)) next.player.getHistory('skipped').add(next.name);
 				}
 				else{
 					next.parent=event;
@@ -29513,6 +29814,7 @@
 					if(next.player&&next.player.skipList.contains(next.name)){
 						event.trigger(next.name+'Skipped');
 						next.player.skipList.remove(next.name);
+						if(lib.phaseName.contains(next.name)) next.player.getHistory('skipped').add(next.name)
 					}
 					else{
 						next.parent=event;
@@ -29910,7 +30212,7 @@
 						else if(typeof info.enable=='string') enable=(info.enable==event.name);
 						if(enable){
 							if(info.filter&&!info.filter(event,player)) enable=false;
-							if(info.viewAs&&event.filterCard&&!event.filterCard(info.viewAs,player)) enable=false;
+							if(info.viewAs&&event.filterCard&&!event.filterCard(info.viewAs,player,event)) enable=false;
 							if(info.viewAs&&info.viewAsFilter&&info.viewAsFilter(player)==false) enable=false;
 							if(info.usable&&get.skillCount(skills2[i])>=info.usable) enable=false;
 							if(info.chooseButton&&_status.event.noButton) enable=false;
@@ -32330,6 +32632,14 @@
 			}
 			return false;
 		},
+		hasPlayer2:function(func){
+			var players=game.players.slice(0).concat(game.dead);
+			for(var i=0;i<players.length;i++){
+				if(players[i].isOut()) continue;
+				if(func(players[i])) return true;
+			}
+			return false;
+		},
 		countPlayer:function(func){
 			var num=0;
 			if(typeof func!='function'){
@@ -32338,6 +32648,24 @@
 			for(var i=0;i<game.players.length;i++){
 				if(game.players[i].isOut()) continue;
 				var result=func(game.players[i]);
+				if(typeof result=='number'){
+					num+=result;
+				}
+				else if(result){
+					num++;
+				}
+			}
+			return num;
+		},
+		countPlayer2:function(func){
+			var num=0;
+			if(typeof func!='function'){
+				func=lib.filter.all;
+			}
+			var players=game.players.slice(0).concat(game.dead);
+			for(var i=0;i<players.length;i++){
+				if(players[i].isOut()) continue;
+				var result=func(players[i]);
 				if(typeof result=='number'){
 					num+=result;
 				}
@@ -32362,11 +32690,37 @@
 			}
 			return list;
 		},
+		filterPlayer2:function(func,list){
+			if(!Array.isArray(list)){
+				list=[];
+			}
+			if(typeof func!='function'){
+				func=lib.filter.all;
+			}
+			var players=game.players.slice(0).concat(game.dead);
+			for(var i=0;i<game.players.length;i++){
+				if(players[i].isOut()) continue;
+				if(func(players[i])){
+					list.add(players[i]);
+				}
+			}
+			return list;
+		},
 		findPlayer:function(func){
 			for(var i=0;i<game.players.length;i++){
 				if(game.players[i].isOut()) continue;
 				if(func(game.players[i])){
 					return game.players[i];
+				}
+			}
+			return null;
+		},
+		findPlayer2:function(func){
+			var players=game.players.slice(0).concat(game.dead);
+			for(var i=0;i<players.length;i++){
+				if(players[i].isOut()) continue;
+				if(func(players[i])){
+					return players[i];
 				}
 			}
 			return null;
@@ -40792,8 +41146,18 @@
 				if(lib.config.show_statusbar_ios=='overlay'){
 					document.body.classList.add('statusbar');
 				}
-				if(lib.config.keep_awake&&window.plugins&&window.plugins.insomnia){
-					window.plugins.insomnia.keepAwake();
+				if(lib.config.keep_awake){
+					if(window.plugins&&window.plugins.insomnia) window.plugins.insomnia.keepAwake();
+					else{
+						lib.init.js(lib.assetURL+'game','NoSleep',function(){
+						var noSleep = new NoSleep();
+						document.addEventListener(lib.config.touchscreen?'touchend':'click', function enableNoSleep() {
+								document.removeEventListener(lib.config.touchscreen?'touchend':'click', enableNoSleep, false);
+								noSleep.enable();
+								window.noSleep=noSleep;
+							}, false);
+						});
+					}
 				}
 
 				lib.init.cssstyles();
@@ -41059,6 +41423,24 @@
 				// if(!lib.config.show_cardpile||_status.connectMode){
 				// 	ui.cardPileButton.style.display='none';
 				// }
+				
+				ui.sortCard=ui.create.system('整理手牌',function(){
+					var hs=game.me.getCards('h');
+					if(!hs.length) return;
+					game.addVideo('lose',game.me,[get.cardsInfo(hs),[],[]]);
+					for(var i=0;i<hs.length;i++){
+						hs[i].goto(ui.special);
+					}
+					hs.sort(function(b,a){
+						if(a.name!=b.name) return lib.sort.card(a.name,b.name);
+						else if(a.suit!=b.suit) return lib.suit.indexOf(a)-lib.suit.indexOf(b);
+						else return a.number-b.number;
+					});
+					game.me.directgain(hs,false);
+				});
+				if(!lib.config.show_sortcard){
+					ui.sortCard.style.display='none';
+				}
 				ui.playerids=ui.create.system('显示身份',function(){
 					if(game.showIdentity){
 						game.showIdentity();
@@ -41609,6 +41991,7 @@
 				node.damagepopups=[];
 				node.judging=[];
 				node.stat=[{card:{},skill:{}}];
+				node.actionHistory=[{useCard:[],respond:[],skipped:[],lose:[],gain:[],sourceDamage:[],damage:[]}];
 				node.tempSkills={};
 				node.storage={};
 				node.marks={};
@@ -44861,6 +45244,7 @@
 					intro2.innerHTML='<span style="font-weight:bold;margin-right:5px">'+get.translation(this.link)+'</span>'+get.skillInfoTranslation(this.link);
 					var info=get.info(this.link);
 					var skill=this.link;
+					var playername=this.linkname;
 					var skillnode=this;
 					if(info.derivation){
 						var derivation=info.derivation;
@@ -44935,12 +45319,15 @@
 							audioinfo=audioinfo[1];
 						}
 						if(typeof audioinfo=='number'){
+							if(Array.isArray(info.audioname)&&info.audioname.contains(playername)) audioname=audioname+'_'+playername;
 							game.playAudio('skill',audioname+getIndex(audioinfo));
 						}
 						else if(audioinfo){
+							if(Array.isArray(info.audioname)&&info.audioname.contains(playername)) audioname=audioname+'_'+playername;
 							game.playAudio('skill',audioname);
 						}
 						else if(true&&info.audio!==false){
+							if(Array.isArray(info.audioname)&&info.audioname.contains(playername)) audioname=audioname+'_'+playername;
 							game.playSkillAudio(audioname,getIndex(2));
 						}
 					}
@@ -44955,6 +45342,7 @@
 					}
 					var current=ui.create.div('.menubutton.large',skills,clickSkill,skilltrans);
 					current.link=list[i];
+					current.linkname=name;
 					if(!initskill){
 						initskill=true;
 						clickSkill.call(current,'init');
@@ -47614,7 +48002,8 @@
 			// 	replace(/主公技/g,'<span class="firetext">主公技</span>');
 		},
 		translation:function(str,arg){
-			if(str&&typeof str=='object'&&str.name){
+			if(str&&typeof str=='object'&&(str.name||str._tempTranslate)){
+				if(str._tempTranslate) return str._tempTranslate;
 				var str2;
 				if(arg=='viewAs'&&str.viewAs){
 					str2=get.translation(str.viewAs);

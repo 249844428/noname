@@ -69,6 +69,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 						}
 					}
 					else{
+						game.addVideo('jiuNode',target,true);
 						if(cards&&cards.length){
 							card=cards[0];
 						}
@@ -216,7 +217,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 							var nh=player.countCards('h');
 							if(nh<=player.hp&&nh<=4&&_status.event.name=='chooseToUse'){
 								if(typeof _status.event.filterCard=='function'&&
-									_status.event.filterCard({name:'huogong'})){
+									_status.event.filterCard({name:'huogong'},player,_status.event)){
 									return -10;
 								}
 								if(_status.event.skill){
@@ -232,7 +233,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 							if(player.countCards('h')<=1) return 0;
 							if(target==player){
 								if(typeof _status.event.filterCard=='function'&&
-									_status.event.filterCard({name:'huogong'})){
+									_status.event.filterCard({name:'huogong'},player,_status.event)){
 									return -1.5;
 								}
 								if(_status.event.skill){
@@ -620,7 +621,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 					if(!muniu.cards) return false;
 					lib.skill.muniu_skill.sync(muniu);
 					for(var i=0;i<muniu.cards.length;i++){
-						if(event.filterCard(muniu.cards[i],player)) return true;
+						if(event.filterCard(muniu.cards[i],player,event)) return true;
 					}
 					return false;
 				},
@@ -659,6 +660,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 					},
 					backup:function(links,player){
 						return {
+							prompt:'选择'+get.translation(links)+'的目标',
 							filterCard:function(){return false},
 							selectCard:-1,
 							viewAs:links[0],
@@ -672,9 +674,6 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 							}
 						}
 					},
-					prompt:function(links,player){
-						return '选择'+get.translation(links)+'的目标';
-					}
 				},
 				ai:{
 					order:4,
@@ -732,15 +731,18 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 			},
 			huogong2:{},
 			jiu:{
-				trigger:{player:'useCard'},
+				trigger:{player:'useCard1'},
 				filter:function(event){
 					return event.card&&event.card.name=='sha';
 				},
 				forced:true,
+				charlotte:true,
+				firstDo:true,
 				content:function(){
 					if(!trigger.baseDamage) trigger.baseDamage=1;
 					trigger.baseDamage+=player.storage.jiu;
 					trigger.jiu=true;
+					game.addVideo('jiuNode',player,false);
 					game.broadcastAll(function(player){
 						player.removeSkill('jiu');
 					},player);
@@ -766,6 +768,8 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 			jiu2:{
 				trigger:{player:'useCardAfter',global:'phaseAfter'},
 				priority:2,
+				firstDo:true,
+				charlotte:true,
 				filter:function(event){
 					if(event.name=='useCard') return (event.card&&(event.card.name=='sha'));
 					return true;
@@ -777,6 +781,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 					game.broadcastAll(function(player){
 						player.removeSkill('jiu');
 					},player);
+					game.addVideo('jiuNode',player,false);
 				},
 			},
 			guding_skill:{

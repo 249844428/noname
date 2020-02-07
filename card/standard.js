@@ -263,7 +263,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 					return target.hp<target.maxHp;
 				},
 				content:function(){
-					target.recover();
+					target.recover(event.baseDamage||1);
 				},
 				ai:{
 					basic:{
@@ -511,7 +511,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 				type:'trick',
 				enable:true,
 				cardcolor:'red',
-				selectTarget:[1,-1],
+				selectTarget:-1,
 				filterTarget:true,
 				contentBefore:function(){
 					"step 0"
@@ -594,7 +594,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 					for(var i=0;i<dialog.buttons.length;i++){
 						if(dialog.buttons[i].link==card){
 							button=dialog.buttons[i];
-							button.querySelector('.info').innerHTML=get.translation(target.name);
+							button.querySelector('.info').innerHTML=get.translation(target);
 							dialog.buttons.remove(button);
 							break;
 						}
@@ -615,7 +615,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 									}
 								}
 							}
-						},card,dialog.videoId,get.translation(target.name),capt);
+						},card,dialog.videoId,get.translation(target),capt);
 					}
 					dialog.content.firstChild.innerHTML=capt;
 					game.addVideo('dialogCapt',null,[dialog.videoId,dialog.content.firstChild.innerHTML]);
@@ -682,7 +682,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 				fullskin:true,
 				type:'trick',
 				enable:true,
-				selectTarget:[1,-1],
+				selectTarget:-1,
 				cardcolor:'red',
 				reverseOrder:true,
 				filterTarget:function(card,player,target){
@@ -717,7 +717,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 				fullskin:true,
 				type:'trick',
 				enable:true,
-				selectTarget:[1,-1],
+				selectTarget:-1,
 				filterTarget:function(card,player,target){
 					return target!=player;
 				},
@@ -739,7 +739,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 					}
 					"step 1"
 					if(result.bool==false){
-						target.damage(event.baseDamage);
+						target.damage(event.baseDamage,event.customSource||player);
 					}
 				},
 				ai:{
@@ -779,7 +779,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 				fullskin:true,
 				type:'trick',
 				enable:true,
-				selectTarget:[1,-1],
+				selectTarget:-1,
 				reverseOrder:true,
 				filterTarget:function(card,player,target){
 					return target!=player;
@@ -1205,8 +1205,8 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 					}
 					"step 1"
 					if(event.directfalse||result.bool==false){
-						player.gain(targets[0].getCards('e',{subtype:'equip1'}),targets[0]);
-						targets[0].$give(targets[0].getCards('e',{subtype:'equip1'}),player);
+						var cards=target.getCards('e',{subtype:'equip1'});
+						if(cards.length) player.gain(cards,target,'give');
 					}
 				},
 				ai:{
@@ -1555,6 +1555,16 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 			},
 			zhuge_skill:{
 				equipSkill:true,
+				audio:true,
+				firstDo:true,
+				trigger:{player:'useCard1'},
+				forced:true,
+				filter:function(event,player){
+					return !event.audioed&&event.card.name=='sha'&&player.countUsed('sha',true)>1&&event.getParent().type=='phase';
+				},
+				content:function(){
+					trigger.audioed=true;
+				},
 				mod:{
 					cardUsable:function(card,player,num){
 						if(card.name=='sha'){
@@ -1640,7 +1650,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 				direct:true,
 				filter:function(event,player){
 					if(get.mode()=='guozhan') return false;
-					return player.canUse('sha',event.target)&&player.hasSha();
+					return player.canUse('sha',event.target,false)&&player.hasSha();
 				},
 				content:function(){
 					"step 0"
@@ -1719,12 +1729,32 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 			fangtian_skill:{
 				equipSkill:true,
 				audio:true,
+				trigger:{player:'useCard1'},
+				forced:true,
+				firstDo:true,
+				filter:function(event,player){
+					if(event.card.name!='sha'||get.mode()=='guozhan') return false;
+					var card=event.card;
+					var range;
+					var select=get.copy(get.info(card).selectTarget);
+					if(select==undefined){
+						if(get.info(card).filterTarget==undefined) return false;
+						range=[1,1];
+					}
+					else if(typeof select=='number') range=[select,select];
+					else if(get.itemtype(select)=='select') range=select;
+					else if(typeof select=='function') range=select(card,player);
+					game.checkMod(card,player,range,'selectTarget',player);
+					return range[1]!=-1&&event.targets.length>range[1];
+				},
+				content:function(){},
 				mod:{
 					selectTarget:function(card,player,range){
 						if(card.name!='sha') return;
 						if(get.mode()=='guozhan') return;
 						if(range[1]==-1) return;
 						var cards=player.getCards('h');
+						if(!cards.length) return;
 						for(var i=0;i<cards.length;i++){
 							if(cards[i].classList.contains('selected')==false)
 								return;
