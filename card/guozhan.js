@@ -42,7 +42,6 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 				fullskin:true,
 				type:'equip',
 				subtype:'equip2',
-				cardimage:'suolianjia',
 				skills:['minguangkai_cancel','minguangkai_link'],
 				ai:{
 					basic:{
@@ -231,7 +230,8 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 					tag:{
 						damage:1,
 						thunderDamage:1,
-						natureDamage:1
+						natureDamage:1,
+						loseCard:1,
 					},
 					result:{
 						target:function(player,target){
@@ -621,7 +621,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 					if(target.isUnseen(0)) controls.push('主将');
 					if(target.isUnseen(1)) controls.push('副将');
 					if(controls.length>1){
-						player.chooseControl(controls);
+						player.chooseControl(controls).set('ai',function(){return 1});
 					}
 					if(controls.length==0) event.finish();
 					"step 1"
@@ -708,7 +708,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 						target:function(player,target){
 							var hs=target.getCards('h');
 							if(hs.length<=1){
-								if(target==player&&hs[0].name=='yiyi'){
+								if(target==player&&(hs.length==0||hs[0].name=='yiyi')){
 									return 0;
 								}
 								return 0.3;
@@ -1060,10 +1060,14 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 					nothunder:true,
 					effect:{
 						target:function(card,player,target,current){
-							if(card.name=='sha'&&player.getEquip('qinggang')||target.hasSkillTag('unequip2')) return;
+							if(target.hasSkillTag('unequip2')) return;
 							if(player.hasSkillTag('unequip',false,{
 								name:card?card.name:null,
-								target:player,
+								target:target,
+								card:card
+							})||player.hasSkillTag('unequip_ai',false,{
+								name:card?card.name:null,
+								target:target,
 								card:card
 							})) return;
 							if(get.tag(card,'natureDamage')) return 'zerotarget';
@@ -1372,7 +1376,7 @@ game.import('card',function(lib,game,ui,get,ai,_status){
 			lulitongxin:'勠力同心',
 			lulitongxin_info:'出牌阶段，对所有大势力角色或所有小势力角色使用。若目标角色：不处于“连环状态”，其横置；处于“连环状态”，其摸一张牌',
 			lianjunshengyan:'联军盛宴',
-			lianjunshengyan_info:'出牌阶段，对你和你选择的除你的势力外的一个势力的所有角色。若目标角色：为你，你摸X张牌或回复X点体力（X为该势力的角色数）；不为你，其摸一张牌，然后重置。',
+			lianjunshengyan_info:'出牌阶段，对你和你选择的除你的势力外的一个势力的所有角色。若目标角色：为你，你选择摸Y张牌并回复X-Y点体力（X为该势力的角色数，Y∈[0,X]）；不为你，其摸一张牌，然后重置。',
 			lianjunshengyan_info_boss:'出牌阶段，对场上所有角色使用。你摸X张牌（X为目存活角色数），其他角色依次选择回复1点体力或摸一张牌。',
 			chiling:'敕令',
 			chiling_info:'出牌阶段，对所有没有势力的角色使用。目标角色选择一项：1、明置一张武将牌，然后摸一张牌；2、弃置一张装备牌；3、失去1点体力。当【敕令】因判定或弃置而置入弃牌堆时，系统将之移出游戏，然后系统于当前回合结束后视为对所有没有势力的角色使用【敕令】',

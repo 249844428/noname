@@ -435,7 +435,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 			},
 			lianpo:{
 				audio:true,
-				trigger:{player:'phaseAfter'},
+				trigger:{global:'phaseAfter'},
 				frequent:true,
 				filter:function(event,player){
 					return player.getStat('kill')>0;
@@ -598,14 +598,15 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 			},
 			renjie2:{
 				audio:true,
-				trigger:{player:'discardAfter'},
+				trigger:{player:'loseAfter'},
 				forced:true,
 				filter:function(event){
+					if(event.type!='discard'||!event.cards2) return false;
 					var evt=event.getParent('phaseDiscard');
 					return evt&&evt.name=='phaseDiscard'
 				},
 				content:function(){
-					player.addMark('renjie',trigger.cards.length);
+					player.addMark('renjie',trigger.cards2.length);
 				}
 			},
 			sbaiyin:{
@@ -627,7 +628,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 			},
 			jilue:{
 				unique:true,
-				group:['jilue_guicai','jilue_fangzhu','jilue_wansha','jilue_zhiheng','jilue_jizhi','rezhiheng_draw','jilue_jizhi_clear']
+				group:['jilue_guicai','jilue_fangzhu','jilue_wansha','jilue_zhiheng','jilue_jizhi','jilue_jizhi_clear']
 			},
 			jilue_guicai:{
 				audio:true,
@@ -638,7 +639,14 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				},
 				content:function(){
 					"step 0"
-					player.chooseCard('是否弃置一枚“忍”，并发动【鬼才】？','he').ai=function(card){
+					player.chooseCard('是否弃置一枚“忍”，并发动〖鬼才〗？','he',function(card){
+  				var player=_status.event.player;
+  				var mod2=game.checkMod(card,player,'unchanged','cardEnabled2',player);
+  				if(mod2!='unchanged') return mod2;
+  				var mod=game.checkMod(card,player,'unchanged','cardRespondable',player);
+  				if(mod!='unchanged') return mod;
+  				return true;
+					}).ai=function(card){
 						var trigger=_status.event.parent._trigger;
 						var player=_status.event.player;
 						var result=trigger.judge(card)-trigger.judge(trigger.player.judging[0]);
@@ -732,7 +740,10 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 					return player.hasMark('renjie');
 				},
 				position:'he',
-				filterCard:true,
+				filterCard:lib.filter.cardDiscardable,
+				discard:false,
+				lose:false,
+				delay:0,
 				selectCard:[1,Infinity],
 				prompt:'弃置一枚“忍”，然后弃置任意张牌并摸等量的牌。若弃置了所有的手牌，则可以多摸一张牌。',
 				check:function(card){
@@ -747,7 +758,15 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				content:function(){
 					'step 0'
 					player.removeMark('renjie',1);
-					event.num=player.hasSkill('rezhiheng_delay')?1:0;
+					player.discard(cards);
+					event.num=1;
+					var hs=player.getCards('h');
+					if(!hs.length) event.num=0;
+					for(var i=0;i<hs.length;i++){
+						if(!cards.contains(hs[i])){
+							event.num=0;break;
+						}
+					}
 					'step 1'
 					player.draw(event.num+cards.length);
 				},
@@ -774,7 +793,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				audio:true,
 				trigger:{player:'useCard'},
 				filter:function(event,player){
-					return (get.type(event.card)=='trick'&&event.cards[0]&&event.cards[0]==event.card)&&player.hasMark('renjie');
+					return (get.type(event.card,'trick')=='trick'&&event.card.isCard);
 				},
 				init:function(player){
 					player.storage.jilue_jizhi=0;
@@ -1159,6 +1178,14 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 				},
 				mark:true,
 				intro:{
+					onunmark:function(storage,player){
+						if(storage&&storage.length){
+							player.$throw(storage,1000);
+							game.cardsDiscard(storage);
+							game.log(storage,'被置入了弃牌堆');
+						 storage.length=0;
+						}
+					},
 					mark:function(dialog,content,player){
 						if(content&&content.length){
 							if(player==game.me||player.isUnderControl()){
@@ -2159,32 +2186,41 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 			
 			"drlt_duorui":{
 				audio:2,
-				init:function(player){
-					player.storage.drlt_duorui=[];
+				init:function(player,skill){
+					if(!player.storage.drlt_duorui) player.storage.drlt_duorui=[];
 				},
 				trigger:{
 					source:'damageSource'
 				},
 				filter:function(event,player){
-				if(player.storage.drlt_duorui.length) return false;
+					if(player.storage.drlt_duorui.length) return false;
 					return player!=event.player&&event.player.isAlive()&&_status.currentPhase==player;
 				},
 				check:function(event,player){
-					if(player.isDisabled(5)) return false;
-					var skills=event.player.skills.slice(0);
-					for(var i=0;i<skills.length;i++){
-					 var info=get.info(skills[i])
-						if(info!=undefined&&!info.charlotte&&(!info.unique||info.gainable)) return true;
-					}
+					if(player.countDisabled()<5&&player.isDisabled(5)) return false;
+					return true;
 				},
+				bannedList:[
+					'bifa','buqu','gzbuqu','songci','funan','xinfu_guhuo','reguhuo','huashen','rehuashen','old_guhuo','shouxi','xinpojun','taoluan','xintaoluan','yinbing','xinfu_yingshi','zhenwei','zhengnan','xinzhengnan','zhoufu',
+				],
 				content:function(){
 					'step 0'
-					event.skills=[];
-					var skills=trigger.player.skills.slice(0);
-					for(var i=0;i<skills.length;i++){
-						var info=get.info(skills[i])
-						if(info!=undefined&&!info.charlotte&&(!info.unique||info.gainable)) event.skills.push(skills[i]);
+					var list=[];
+					var listm=[];
+					var listv=[];
+					if(trigger.player.name1!=undefined) listm=lib.character[trigger.player.name1][3];
+					else listm=lib.character[trigger.player.name][3];
+					if(trigger.player.name2!=undefined) listv=lib.character[trigger.player.name2][3];
+					listm=listm.concat(listv);
+					var func=function(skill){
+						var info=get.info(skill);
+						if(!info||info.charlotte||info.zhuSkill||info.juexingji||info.limited||(info.unique&&!info.gainable)||lib.skill.drlt_duorui.bannedList.contains(skill)) return false;
+						return true;
 					};
+					for(var i=0;i<listm.length;i++){
+						if(func(listm[i])) list.add(listm[i]);
+					}
+					event.skills=list;
 					if(player.countDisabled()<5){
 						player.chooseToDisable().ai=function(event,player,list){
 							if(list.contains('equip5')) return 'equip5';
@@ -2326,7 +2362,9 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 			"_drlt_zhiti":{
 				mod:{
 					maxHandcard:function (player,num){
-						if(player.maxHp>player.hp&&game.countPlayer(function(current){return current!=player&&current.hasSkill('drlt_zhiti')&&get.distance(current,player,'attack')<=1})) return num-1;
+						if(player.maxHp>player.hp&&game.countPlayer(function(current){
+							return current!=player&&current.hasSkill('drlt_zhiti')&&current.inRange(player);
+						})) return num-1;
 					},
 				},
 			},
@@ -2615,7 +2653,7 @@ game.import('character',function(lib,game,ui,get,ai,_status){
 			sbaiyin:'拜印',
 			sbaiyin_info:'觉醒技，准备阶段开始时，若你的“忍”标记数不小于4，你减1点体力上限，然后获得〖极略〗',
 			jilue:'极略',
-			jilue_info:'当一名角色的判定牌生效前，你可以弃1枚“忍”标记并发动〖鬼才〗；每当你受到伤害后，你可以弃1枚“忍”标记并发动〖放逐〗；当你使用普通锦囊牌时，你可以弃1枚“忍”标记并发动〖集智〗；出牌阶段限一次，你可以弃1枚“忍”标记并发动〖制衡〗；出牌阶段，你可以弃1枚“忍”标记并获得〖完杀〗直到回合结束。',
+			jilue_info:'当一名角色的判定牌生效前，你可以弃1枚“忍”标记并发动〖鬼才〗；每当你受到伤害后，你可以弃1枚“忍”标记并发动〖放逐〗；当你使用锦囊牌时，你可以弃1枚“忍”标记并发动〖集智〗；出牌阶段限一次，你可以弃1枚“忍”标记并发动〖制衡〗；出牌阶段，你可以弃1枚“忍”标记并获得〖完杀〗直到回合结束。',
 			jilue_guicai:'鬼才',
 			jilue_fangzhu:'放逐',
 			jilue_wansha:'完杀',
